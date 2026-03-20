@@ -1,29 +1,6 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
-
-export interface IBooking extends Document {
-  guestId: Types.ObjectId;
-  hotelId: Types.ObjectId;
-  roomId?: Types.ObjectId;
-  checkIn: Date;
-  checkOut: Date;
-  nights: number;
-  guests: number;
-  pricePerNight: number;
-  subtotal: number;
-  taxes: number;
-  totalAmount: number;
-  status: BookingStatus;
-  razorpayOrderId?: string;
-  razorpayPaymentId?: string;
-  razorpaySignature?: string;
-  specialRequests: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const bookingSchema = new Schema<IBooking>(
+const bookingSchema = new Schema(
   {
     guestId: {
       type: Schema.Types.ObjectId,
@@ -54,18 +31,13 @@ const bookingSchema = new Schema<IBooking>(
   { timestamps: true },
 );
 
-// Auto-calculate nights
 bookingSchema.pre("save", function (next) {
   if (this.checkIn && this.checkOut) {
     const ms =
       new Date(this.checkOut).getTime() - new Date(this.checkIn).getTime();
     this.nights = Math.ceil(ms / (1000 * 60 * 60 * 24));
   }
-  // @ts-ignore
   next();
 });
 
-export const Booking: Model<IBooking> = mongoose.model<IBooking>(
-  "Booking",
-  bookingSchema,
-);
+export const Booking = mongoose.model("Booking", bookingSchema);

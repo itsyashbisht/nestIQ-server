@@ -1,9 +1,9 @@
+import "./env.js";
 import cors from "cors";
-import "./env.ts";
 import cookieParser from "cookie-parser";
-import express, { Application } from "express";
+import express from "express";
 
-const app: Application = express();
+const app = express();
 
 // ENV validation
 if (!process.env.CORS_ORIGIN) {

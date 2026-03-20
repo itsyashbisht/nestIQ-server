@@ -1,14 +1,9 @@
 class ApiError extends Error {
-  message: string;
-  statusCode: number;
-  errors: unknown[];
-  private success: boolean;
-
   constructor(
-    statusCode: number,
-    message: string = "Something went wrong",
-    errors: unknown[],
-    stack?: string, //stack-trace : where the error happens in your code
+    statusCode,
+    message = "Something went wrong",
+    errors = [],
+    stack,
   ) {
     super(message);
     this.statusCode = statusCode;
@@ -16,7 +11,6 @@ class ApiError extends Error {
     this.errors = errors;
     this.success = false;
 
-    // Fix prototype chain
     Object.setPrototypeOf(this, ApiError.prototype);
 
     if (stack) {
@@ -26,3 +20,5 @@ class ApiError extends Error {
     }
   }
 }
+
+export default ApiError;

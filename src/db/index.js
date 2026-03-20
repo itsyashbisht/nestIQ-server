@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const connectDB = async (): Promise<void> => {
+const connectDB = async () => {
   try {
     const connectionInstance = await mongoose.connect(
       `${process.env.MONGODB_URI}`,
@@ -8,12 +8,12 @@ const connectDB = async (): Promise<void> => {
     console.log(
       `Connected to MongoDB connection, DB host: ${connectionInstance.connection.host} `,
     );
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error("MongoDB connection failed:", error);
     } else {
       console.log(
-        "Unknown error occured while connecting to MongoDB connection",
+        "Unknown error occurred while connecting to MongoDB connection",
       );
     }
     process.exit(1);

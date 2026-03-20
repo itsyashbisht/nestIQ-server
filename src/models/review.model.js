@@ -1,19 +1,6 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export interface IReview extends Document {
-  guestId: Types.ObjectId;
-  hotelId: Types.ObjectId;
-  bookingId?: Types.ObjectId;
-  rating: number;
-  title?: string;
-  comment: string;
-  images: { url: string; public_id: string }[];
-  isVerified: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const reviewSchema = new Schema<IReview>(
+const reviewSchema = new Schema(
   {
     guestId: { type: Schema.Types.ObjectId, ref: "User", required: true },
     hotelId: {
@@ -32,9 +19,8 @@ const reviewSchema = new Schema<IReview>(
   { timestamps: true },
 );
 
-// Auto-update hotel avg rating after each review saved
 reviewSchema.post("save", async function () {
-  const stats = await mongoose.model<IReview>("Review").aggregate([
+  const stats = await mongoose.model("Review").aggregate([
     { $match: { hotelId: this.hotelId } },
     {
       $group: {
@@ -44,6 +30,7 @@ reviewSchema.post("save", async function () {
       },
     },
   ]);
+
   if (stats.length > 0) {
     await mongoose.model("Hotel").findByIdAndUpdate(this.hotelId, {
       rating: Math.round(stats[0].avgRating * 10) / 10,
@@ -52,7 +39,4 @@ reviewSchema.post("save", async function () {
   }
 });
 
-export const Review: Model<IReview> = mongoose.model<IReview>(
-  "Review",
-  reviewSchema,
-);
+export const Review = mongoose.model("Review", reviewSchema);

@@ -1,23 +1,6 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export type RoomType = "standard" | "deluxe" | "suite" | "villa" | "dormitory";
-
-export interface IRoom extends Document {
-  hotelId: Types.ObjectId;
-  name: string;
-  type: RoomType;
-  description: string;
-  images: { url: string; public_id: string }[];
-  pricePerNight: number;
-  maxGuests: number;
-  amenities: string[];
-  isAvailable: boolean;
-  totalRooms: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const roomSchema = new Schema<IRoom>(
+const roomSchema = new Schema(
   {
     hotelId: {
       type: Schema.Types.ObjectId,
@@ -42,4 +25,4 @@ const roomSchema = new Schema<IRoom>(
   { timestamps: true },
 );
 
-export const Room: Model<IRoom> = mongoose.model<IRoom>("Room", roomSchema);
+export const Room = mongoose.model("Room", roomSchema);

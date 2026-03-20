@@ -1,38 +1,6 @@
-import mongoose, { Document, Model, Schema, Types } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export type HotelCategory = "budget" | "comfort" | "luxury" | "boutique";
-export type HotelVibe =
-  | "romantic"
-  | "family"
-  | "adventure"
-  | "business"
-  | "solo"
-  | "wellness";
-
-export interface IHotel extends Document {
-  name: string;
-  slug: string;
-  description: string;
-  city: string;
-  state: string;
-  address: string;
-  category: HotelCategory;
-  vibes: HotelVibe[];
-  images: { url: string; public_id: string }[];
-  amenities: string[];
-  pricePerNight: number;
-  rating: number;
-  reviewCount: number;
-  isActive: boolean;
-  nearbyAttractions: string[];
-  checkInTime: string;
-  checkOutTime: string;
-  ownerId?: Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const hotelSchema = new Schema<IHotel>(
+const hotelSchema = new Schema(
   {
     name: { type: String, required: true, trim: true, index: true },
     slug: {
@@ -83,7 +51,4 @@ const hotelSchema = new Schema<IHotel>(
   { timestamps: true },
 );
 
-export const Hotel: Model<IHotel> = mongoose.model<IHotel>(
-  "Hotel",
-  hotelSchema,
-);
+export const Hotel = mongoose.model("Hotel", hotelSchema);

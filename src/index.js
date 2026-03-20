@@ -1,20 +1,20 @@
-import connectDB from "./db";
-import app from "./app";
+import connectDB from "./db/index.js";
+import app from "./app.js";
 
-const PORT = process.env.PORT || 8000;
+const PORT = Number(process.env.PORT) || 8000;
 
-const startServer = async (): Promise<void> => {
+const startServer = async () => {
   try {
     await connectDB();
-    app.on("error", (error: Error) => {
+    app.on("error", (error) => {
       console.error("Server Error: " + error);
       throw error;
     });
 
-    app.listen(PORT, (): void => {
+    app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error("MongoDB connection failed! " + error);
     } else {
