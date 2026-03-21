@@ -1,7 +1,7 @@
-import { User } from "../models/index.js";
-import ApiError from "../utils/apiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
+import { User } from "../models/index.js";
+import { ApiError } from "../utils/apiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -32,7 +32,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
-      process.env.JWT_SECRET,
+      process.env.REFRES_TOKEN_SECRET,
     );
 
     const user = User.findById(decodedToken._id);
@@ -146,6 +146,37 @@ const login = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, loggedInUser, "Successfully logged in!"));
 });
 
+const logout = asyncHandler(async (req, res) => {
+  const id = req.user?._id;
+  if (!id) throw new ApiError(401, "Unauthorized!");
+
+  await User.findByIdAndUpdate(
+    id,
+    { $unset: { refreshToken: 1 } },
+    { new: true },
+  );
+
+  const options = { httpOnly: true, secure: true };
+
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, null, "Successfully logged out!"));
+});
+
+const getMe = asyncHandler(async (req, res) => {
+  const id = req.user?._id;
+  if (!id) throw new ApiError(401, "Unauthorized!");
+
+  const user = await User.findById(id).select("-password -refreshToken");
+  if (!user) throw new ApiError(404, "User not found!");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "User fetched successfully!"));
+});
+
 const updateUserDetails = asyncHandler(async (req, res) => {
   const id = req?.user?._id;
   if (!id) throw new ApiError(400, "User doesn't exist!");
@@ -177,7 +208,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
       $set: updates,
     },
     { new: true },
-  );
+  ).select("-password -refreshToken");
   if (!updatedUser) throw new ApiError(401, "Failed to update");
 
   return res
@@ -199,7 +230,7 @@ const updateRoleToOwner = asyncHandler(async (req, res) => {
     {
       new: true,
     },
-  );
+  ).select("-password -refreshToken");
   if (!user) throw new ApiError(401, "Failed to update role!");
 
   return res
@@ -208,28 +239,27 @@ const updateRoleToOwner = asyncHandler(async (req, res) => {
 });
 
 const changePassword = asyncHandler(async (req, res) => {
-  const id = req?.user?._id;
-  if (!id) throw new ApiError(400, "User doesn't exist!");
+  const id = req.user?._id;
+  if (!id) throw new ApiError(401, "Unauthorized!");
 
-  const { password } = req.body;
-  if (!password) throw new ApiError(400, "Password is required!");
+  const { curPassword, newPassword } = req.body;
+  if (!curPassword || !newPassword) {
+    throw new ApiError(400, "Current and new password are required!");
+  }
 
-  const user = User.findByIdAndUpdate(
-    id,
-    {
-      $set: {
-        password,
-      },
-    },
-    {
-      new: true,
-    },
-  );
-  if (!user) throw new ApiError(401, "Failed to change password!");
+  const user = await User.findById(id);
+  if (!user) throw new ApiError(404, "User not found!");
+
+  const isPasswordValid = await user.isPasswordCorrect(curPassword);
+  if (!isPasswordValid)
+    throw new ApiError(401, "Current password is incorrect!");
+
+  user.password = newPassword;
+  await user.save({ validateBeforeSave: false });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Successfully changed password!"));
+    .json(new ApiResponse(200, null, "Password changed successfully!"));
 });
 
 const forgotPassword = asyncHandler(async (req, res) => {
@@ -254,10 +284,23 @@ const forgotPassword = asyncHandler(async (req, res) => {
   );
 });
 
+const getAllUsers = asyncHandler(async (req, res) => {
+  const users = await User.find()
+    .select("-password -refreshToken")
+    .sort({ createdAt: -1 });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, users, "Users fetched successfully!"));
+});
+
 export {
   changePassword,
+  getAllUsers,
+  getMe,
   forgotPassword,
   login,
+  logout,
   refreshAccessToken,
   register,
   updateRoleToOwner,
