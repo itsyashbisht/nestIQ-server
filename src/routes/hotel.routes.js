@@ -12,9 +12,9 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.route("/").get(getAllHotels);
+router.route("/hotels").get(getAllHotels);
 router
-  .route("/")
+  .route("/create")
   .post(verifyJWT, authorizeRoles("Owner", "Admin"), createHotel);
 router.route("/slug/:slug").get(getHotelBySlug);
 router.route("/:hotelId").get(getHotelById);

@@ -12,8 +12,10 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.route("/").post(verifyJWT, createBooking);
-router.route("/").get(verifyJWT, authorizeRoles("Admin"), getAllBookings);
+router.route("/create").post(verifyJWT, createBooking);
+router
+  .route("/bookings")
+  .get(verifyJWT, authorizeRoles("Admin"), getAllBookings);
 router.route("/my-bookings").get(verifyJWT, getMyBookings);
 router.route("/:bookingId").get(verifyJWT, getBookingById);
 router.route("/:bookingId/cancel").patch(verifyJWT, cancelBooking);
