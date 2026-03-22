@@ -10,23 +10,26 @@ const bookingSchema = new Schema(
     },
     hotelId: { type: Schema.Types.ObjectId, ref: "Hotel", required: true },
     roomId: { type: Schema.Types.ObjectId, ref: "Room" },
+
     checkIn: { type: Date, required: true },
     checkOut: { type: Date, required: true },
-    nights: { type: Number, required: true },
+    nights: { type: Number, default: 0 }, // ← set by pre("save") hook
     guests: { type: Number, required: true, default: 1 },
+
     pricePerNight: { type: Number, required: true },
     subtotal: { type: Number, required: true },
     taxes: { type: Number, required: true },
     totalAmount: { type: Number, required: true },
+
     status: {
       type: String,
       enum: ["pending", "confirmed", "cancelled", "completed"],
       default: "pending",
     },
-    razorpayOrderId: { type: String },
-    razorpayPaymentId: { type: String },
-    razorpaySignature: { type: String },
+
+    razorpayOrderId: { type: String, default: "" },
     specialRequests: { type: String, default: "" },
+    // ✅ NO payment field — virtual handles it
   },
   { timestamps: true },
 );
@@ -39,5 +42,16 @@ bookingSchema.pre("save", function (next) {
   }
   next();
 });
+
+// ✅ Virtual — populate payment without a stored ref
+bookingSchema.virtual("paymentInfo", {
+  ref: "Payment",
+  localField: "_id",
+  foreignField: "bookingId",
+  justOne: true,
+});
+
+bookingSchema.set("toJSON", { virtuals: true });
+bookingSchema.set("toObject", { virtuals: true });
 
 export const Booking = mongoose.model("Booking", bookingSchema);

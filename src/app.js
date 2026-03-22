@@ -2,6 +2,11 @@ import "./env.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import express from "express";
+import bookingRouter from "./routes/booking.routes.js";
+import hotelRouter from "./routes/hotel.routes.js";
+import reviewRouter from "./routes/review.routes.js";
+import userRouter from "./routes/user.routes.js";
+import paymentRouter from "./routes/payment.routes.js";
 
 const app = express();
 
@@ -26,14 +31,10 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-import bookingRouter from "./routes/booking.routes.js";
-import hotelRouter from "./routes/hotel.routes.js";
-import reviewRouter from "./routes/review.routes.js";
-import userRouter from "./routes/user.routes.js";
-
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/hotels", hotelRouter);
 app.use("/api/v1/reviews", reviewRouter);
+app.use("/api/v1/payments", paymentRouter);
 
 export default app;

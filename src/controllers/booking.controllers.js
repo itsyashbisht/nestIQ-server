@@ -2,6 +2,8 @@ import { Booking, Hotel } from "../models/index.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { razorpayInstance } from "../utils/razorpay.js";
+import { Payment } from "../models/payment.model.js";
 
 const GST_RATE = 0.12; // 12%
 
@@ -45,6 +47,7 @@ const createBooking = asyncHandler(async (req, res) => {
   const taxes = Math.round(subtotal * GST_RATE);
   const totalAmount = subtotal + taxes;
 
+  // Creating booking in DB
   const booking = await Booking.create({
     guestId,
     hotelId,
@@ -62,9 +65,44 @@ const createBooking = asyncHandler(async (req, res) => {
   });
   if (!booking) throw new ApiError(500, "Failed to create booking!");
 
+  const options = {
+    amount: totalAmount * 100,
+    currency: "INR",
+    recipt: `booking-${booking._id}`,
+  };
+
+  // Razorpay Order
+  const razorpayOrder = await razorpayInstance.orders.create(options);
+  if (!order) throw new ApiError(500, "Failed to create razorpay order!");
+
+  // Creating payment
+  const payment = await Payment.create({
+    bookingId: booking._id,
+    guestId,
+    hotelId,
+    razorpayOrderId: razorpayOrder.id,
+    amount: booking.totalAmount,
+    currency: options.currency,
+    status: "created",
+    recipt: razorpayOrder.recipt,
+  });
+  if (!payment)
+    throw new ApiError(500, "Failed to create payment for booking!");
+
+  // Save orderId on booking
+  await Booking.findByIdAndUpdate(booking._id, {
+    $set: { razorpayOrderId: razorpayOrder.id },
+  });
+
   return res
     .status(201)
-    .json(new ApiResponse(201, booking, "Booking created successfully!"));
+    .json(
+      new ApiResponse(
+        201,
+        { booking, totalAmount, paymentRecipt: payment.recipt },
+        "Booking created successfully!",
+      ),
+    );
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {
