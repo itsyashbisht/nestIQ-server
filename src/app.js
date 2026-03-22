@@ -7,6 +7,7 @@ import hotelRouter from "./routes/hotel.routes.js";
 import reviewRouter from "./routes/review.routes.js";
 import userRouter from "./routes/user.routes.js";
 import paymentRouter from "./routes/payment.routes.js";
+import aiRouter from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -36,5 +37,6 @@ app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/hotels", hotelRouter);
 app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/nestiq", aiRouter);
 
 export default app;

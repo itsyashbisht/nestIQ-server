@@ -5,7 +5,13 @@
     "moduleResolution": "NodeNext",
     "allowJs": true,
     "checkJs": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"],
+    "maxNodeModuleJsDepth": 2
   },
-  "include": ["src/**/*.js"]
+  "typeAcquisition": {
+    "enable": true
+  },
+  "include": ["**/*.js"],
+  "exclude": ["node_modules", "dist"]
 }
