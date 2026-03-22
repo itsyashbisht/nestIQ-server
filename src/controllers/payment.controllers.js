@@ -9,7 +9,7 @@ const getRazorpayKey = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { key: process.env.RAZORPAY_KEY_ID },
+        { key: process.env.RAZORPAY_KEY },
         "Razorpay key fetched successfully",
       ),
     );
@@ -51,7 +51,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
   // Recomute HMAC signature
   const body = `${razorpay_payment_id}|${razorpay_signature}`;
   const expectedSignature = crypto
-    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+    .createHmac("sha256", process.env.RAZORPAY_SECRET)
     .update(body)
     .digest("hex");
 
