@@ -13,29 +13,31 @@ const generateAccessAndRefreshToken = async (userId) => {
     const accessToken = user.generateAccessToken();
 
     user.refreshToken = refreshToken;
-    await user.save({ validateBeforeSafe: false });
+    await user.save({ validateBeforeSave: false });
 
+    console.log("tokens: ", { accessToken, refreshToken });
     return { accessToken, refreshToken };
   } catch (error) {
-    throw new MongoAPIError(
+    console.log(error);
+    throw new ApiError(
+      500,
       "Something went wrong while generating access token and refreshToken",
-      error,
     );
   }
 };
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
   const incomingRefreshToken =
-    req.cookie?.refreshToken || req.body?.refreshToken;
+    req.cookies?.refreshToken || req.body?.refreshToken;
   if (!incomingRefreshToken) throw new ApiError(401, "Unauthorized user");
 
   try {
     const decodedToken = jwt.verify(
       incomingRefreshToken,
-      process.env.REFRES_TOKEN_SECRET,
+      process.env.REFRESH_TOKEN_SECRET,
     );
 
-    const user = User.findById(decodedToken._id);
+    const user = await User.findById(decodedToken._id);
     if (!user) throw new ApiError(400, "User not found");
 
     if (incomingRefreshToken !== user?.refreshToken) {
@@ -43,7 +45,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     const { accessToken, refreshToken: newRefreshToken } =
-      generateAccessAndRefreshToken(user._id);
+      await generateAccessAndRefreshToken(user._id);
 
     const options = {
       httpOnly: true,
@@ -75,7 +77,7 @@ const register = asyncHandler(async (req, res) => {
     city,
     state,
     pincode,
-    role,
+    role = "Guest",
   } = req.body;
   if (
     !email ||
@@ -122,10 +124,10 @@ const login = asyncHandler(async (req, res) => {
   const existedUser = await User.findOne({ email });
   if (!existedUser) throw new ApiError(400, "User doesn't exist!");
 
-  const isPasswordValid = await user.isPasswordCorrect(password);
+  const isPasswordValid = await existedUser.isPasswordCorrect(password);
   if (!isPasswordValid) throw new ApiError(401, "Invalid user password!");
 
-  const { accessToken, refreshToken } = generateAccessAndRefreshToken(
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
     existedUser._id,
   );
 
@@ -167,6 +169,7 @@ const logout = asyncHandler(async (req, res) => {
 
 const getMe = asyncHandler(async (req, res) => {
   const id = req.user?._id;
+  console.log(req.user);
   if (!id) throw new ApiError(401, "Unauthorized!");
 
   const user = await User.findById(id).select("-password -refreshToken");
