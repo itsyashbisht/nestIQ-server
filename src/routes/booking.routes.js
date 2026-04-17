@@ -12,7 +12,7 @@ import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.route("/create").post(verifyJWT, createBooking);
+router.route("/create-booking").post(verifyJWT, createBooking);
 router
   .route("/bookings")
   .get(verifyJWT, authorizeRoles("Admin"), getAllBookings);

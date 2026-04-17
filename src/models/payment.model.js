@@ -59,7 +59,7 @@ const paymentSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-    recipt: {
+    receipt: {
       type: String,
       default: null,
     },

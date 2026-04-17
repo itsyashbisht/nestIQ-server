@@ -4,6 +4,7 @@ import { chatModel, structuredModel } from "../utils/groqAI.js";
 import { z } from "zod";
 import { Hotel } from "../models/index.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import { ApiError } from "../utils/apiError.js";
 
 // AI-search
 const aiSearch = asyncHandler(async (req, res) => {
@@ -12,9 +13,11 @@ const aiSearch = asyncHandler(async (req, res) => {
 
   const { object } = await generateObject({
     model: structuredModel,
+    // Force `response_format: json_object` (avoid `json_schema`, which not all Groq models support).
+    providerOptions: { groq: { structuredOutputs: false } },
     schema: z.object({
-      city: z.string().otpional(),
-      category: z.enum(['budget", "comfort", "luxury", "boutique']).optional(),
+      city: z.string().optional(),
+      category: z.enum(["budget", "comfort", "luxury", "boutique"]).optional(),
       vibe: z
         .enum([
           "romantic",
@@ -35,7 +38,7 @@ const aiSearch = asyncHandler(async (req, res) => {
   });
 
   const filter = { isActive: true };
-  if (object.city) filter.city = { $regex: object.city, $options: "i" }; // i = case-sensitive
+  if (object.city) filter.city = { $regex: object.city, $options: "i" }; // i = case-insensitive
   if (object.category) filter.category = object.category;
   if (object.vibe) filter.vibes = { $in: [object.vibe] };
   if (object.minPrice || object.maxPrice) {
@@ -71,7 +74,7 @@ const hotelChat = asyncHandler(async (req, res) => {
 
   const result = await streamText({
     model: chatModel,
-    system: `You are a helpful assistant for ${hotel.name}, a ${hotel.category} hotel in ${hotel.city}, ${hotel.state}.Price: ₹${hotel.pricePerNight}/night. Rating: ${hotel.rating}/5. Amenities: ${hotel.amenities.join(", ")}. Vibes: ${hotel.vibes.join(", ")}.Nearby: ${hotel.nearbyAttractions?.join(", ")}.Answer questions about this hotel honestly and concisely. If you don't know something, say so.`,
+    system: `You are a helpful assistant for ${hotel.name}, a ${hotel.category} hotel in ${hotel.city}, ${hotel.state}. Price: INR ${hotel.pricePerNight}/night. Rating: ${hotel.rating}/5. Amenities: ${hotel.amenities.join(", ")}. Vibes: ${hotel.vibes.join(", ")}. Nearby: ${hotel.nearbyAttractions?.join(", ")}. Answer questions about this hotel honestly and concisely. If you don't know something, say so.`,
     messages,
   });
 
@@ -89,6 +92,7 @@ const budgetPlanner = asyncHandler(async (req, res) => {
 
   const { object } = await generateObject({
     model: structuredModel,
+    providerOptions: { groq: { structuredOutputs: false } },
     schema: z.object({
       hotelBudget: z.number(),
       foodBudget: z.number(),
@@ -96,7 +100,7 @@ const budgetPlanner = asyncHandler(async (req, res) => {
       totalBudget: z.number(),
       tips: z.array(z.string()).max(3),
     }),
-    prompt: `Calculate a realistic trip budget for ${guests} guest(s) staying ${nights} nights in ${city}, India. Hotel cost is ₹${pricePerNight * nights} total (₹${pricePerNight}/night × ${nights} nights). Estimate local food and travel costs realistically for ${city}. All amounts in INR. Tips should be India-specific and practical.`,
+    prompt: `Calculate a realistic trip budget for ${guests} guest(s) staying ${nights} nights in ${city}, India. Hotel cost is INR ${pricePerNight * nights} total (INR ${pricePerNight}/night x ${nights} nights). Estimate local food and travel costs realistically for ${city}. All amounts in INR. Tips should be India-specific and practical.`,
   });
 
   return res
@@ -118,16 +122,16 @@ const concierge = asyncHandler(async (req, res) => {
         description: "Search for hotels matching city and filters",
         parameters: z.object({
           city: z.string(),
-          maxPrice: z.string(),
-          vibe: z.string(),
+          maxPrice: z.number().optional(),
+          vibe: z.string().optional(),
         }),
         execute: async ({ city, maxPrice, vibe }) => {
           const filter = {
             isActive: true,
             city: { $regex: city, $options: "i" },
           };
-          if (maxPrice) filter.pricePerNight = { $lte: maxPrice };
-          if (vibe) filter.pricePerNight = { $in: [vibe] };
+          if (maxPrice != null) filter.pricePerNight = { $lte: maxPrice };
+          if (vibe) filter.vibes = { $in: [vibe] };
 
           const hotels = await Hotel.find(filter).limit(4).lean();
           return hotels.map((h) => ({
@@ -153,6 +157,7 @@ const generateListing = asyncHandler(async (req, res) => {
 
   const { object } = await generateObject({
     model: structuredModel,
+    providerOptions: { groq: { structuredOutputs: false } },
     schema: z.object({
       name: z.string(),
       category: z.enum(["budget", "comfort", "luxury", "boutique"]),

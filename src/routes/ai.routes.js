@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  aiSearch,
   budgetPlanner,
   concierge,
   generateListing,
@@ -10,7 +9,6 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-router.post("/search", aiSearch);
 router.post("/chat", hotelChat);
 router.post("/budget", budgetPlanner);
 router.post("/concierge", concierge);

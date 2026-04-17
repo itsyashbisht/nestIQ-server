@@ -8,19 +8,48 @@ const roomSchema = new Schema(
       required: true,
       index: true,
     },
-    name: { type: String, required: true, trim: true },
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     type: {
       type: String,
       enum: ["standard", "deluxe", "suite", "villa", "dormitory"],
       required: true,
     },
-    description: { type: String, required: true },
-    images: [{ url: String, public_id: String }],
-    pricePerNight: { type: Number, required: true },
-    maxGuests: { type: Number, required: true, default: 2 },
-    amenities: [{ type: String }],
-    isAvailable: { type: Boolean, default: true },
-    totalRooms: { type: Number, default: 1 },
+    description: {
+      type: String,
+      required: true,
+    },
+    images: [
+      {
+        url: String,
+        public_id: String,
+      },
+    ],
+    pricePerNight: {
+      type: Number,
+      required: true,
+    },
+    maxGuests: {
+      type: Number,
+      required: true,
+      default: 2,
+    },
+    amenities: [
+      {
+        type: String,
+      },
+    ],
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
+    totalRooms: {
+      type: Number,
+      default: 1,
+    },
   },
   { timestamps: true },
 );

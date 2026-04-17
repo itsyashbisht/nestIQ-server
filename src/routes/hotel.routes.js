@@ -9,10 +9,12 @@ import {
 } from "../controllers/hotel.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
+import { aiSearch } from "../controllers/ai.controllers.js";
 
 const router = Router();
 
-router.route("/hotels").get(getAllHotels);
+router.route("/all").get(getAllHotels);
+router.post("/search", aiSearch);
 router
   .route("/create")
   .post(verifyJWT, authorizeRoles("Owner", "Admin"), createHotel);
