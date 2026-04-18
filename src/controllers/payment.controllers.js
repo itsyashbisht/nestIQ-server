@@ -2,6 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { ApiError } from "../utils/apiError.js";
 import { Booking, Payment } from "../models/index.js";
+import crypto from "crypto";
 
 const getRazorpayKey = asyncHandler(async (req, res) => {
   return res
@@ -9,7 +10,7 @@ const getRazorpayKey = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { key: process.env.RAZORPAY_KEY },
+        { razorpaykeyId: process.env.RAZORPAY_KEY },
         "Razorpay key fetched successfully",
       ),
     );
@@ -48,8 +49,8 @@ const verifyPayment = asyncHandler(async (req, res) => {
     throw new ApiError(400, `Booking is already ${booking.status}!`);
   }
 
-  // Recomute HMAC signature
-  const body = `${razorpay_payment_id}|${razorpay_signature}`;
+  // Recompute HMAC signature
+  const body = `${razorpay_order_id}|${razorpay_payment_id}`;
   const expectedSignature = crypto
     .createHmac("sha256", process.env.RAZORPAY_SECRET)
     .update(body)

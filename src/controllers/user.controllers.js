@@ -3,6 +3,7 @@ import { User } from "../models/index.js";
 import { ApiError } from "../utils/apiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiResponse } from "../utils/apiResponse.js";
+import crypto from "crypto";
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -169,7 +170,6 @@ const logout = asyncHandler(async (req, res) => {
 
 const getMe = asyncHandler(async (req, res) => {
   const id = req.user?._id;
-  console.log(req.user);
   if (!id) throw new ApiError(401, "Unauthorized!");
 
   const user = await User.findById(id).select("-password -refreshToken");
@@ -287,6 +287,54 @@ const forgotPassword = asyncHandler(async (req, res) => {
   );
 });
 
+const verifyResetToken = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  if (!token) throw new ApiError(401, "Token is required!");
+
+  // Hash the incoming token to compare with stored hashed token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+
+  if (!user) throw new ApiError(400, "Invalid or expired reset token!");
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { valid: true }, "Token is valid!"));
+});
+
+const resetPassword = asyncHandler(async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+
+  if (!token) throw new ApiError(400, "Reset token is required!");
+  if (!newPassword) throw new ApiError(400, "New password is required!");
+  if (newPassword.length < 8)
+    throw new ApiError(400, "Password must be at least 8 characters!");
+
+  // Hash the incoming token to compare with stored hashed token
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+  const user = await User.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpires: { $gt: Date.now() },
+  });
+
+  if (!user) throw new ApiError(400, "Invalid or expired reset token!");
+
+  // Set new password — bcrypt pre-save hook will hash it
+  user.password = newPassword;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = null;
+  await user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, "Password reset successfully!"));
+});
+
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find()
     .select("-password -refreshToken")
@@ -304,6 +352,8 @@ export {
   forgotPassword,
   login,
   logout,
+  verifyResetToken,
+  resetPassword,
   refreshAccessToken,
   register,
   updateRoleToOwner,

@@ -1,17 +1,15 @@
-import { Booking, Hotel } from "../models/index.js";
+import { Booking, Hotel, Payment } from "../models/index.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { razorpayInstance } from "../utils/razorpay.js";
-import { Payment } from "../models/payment.model.js";
 
 const GST_RATE = 0.12; // 12%
-
 const createBooking = asyncHandler(async (req, res) => {
   const guestId = req.user?._id;
   if (!guestId) throw new ApiError(401, "Unauthorized!");
 
-  const { hotelId, roomId, checkIn, checkOut, guests, specialRequests } =
+  const { hotelId, rooms, checkIn, checkOut, guests, specialRequests } =
     req.body;
 
   if (!hotelId || !checkIn || !checkOut || !guests) {
@@ -19,6 +17,9 @@ const createBooking = asyncHandler(async (req, res) => {
       400,
       "hotelId, checkIn, checkOut and guests are required!",
     );
+  }
+  if (!Array.isArray(rooms) || rooms.length === 0) {
+    throw new ApiError(400, "At least one room selection is required!");
   }
 
   // Validate dates
@@ -42,8 +43,9 @@ const createBooking = asyncHandler(async (req, res) => {
   const nights = Math.ceil(
     (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
   );
-  const pricePerNight = roomId ? req.body.pricePerNight : hotel.pricePerNight;
-  const subtotal = pricePerNight * nights;
+  const subtotal = rooms.reduce((sum, room) => {
+    return sum + room.pricePerNight * room.quantity * nights;
+  }, 0);
   const taxes = Math.round(subtotal * GST_RATE);
   const totalAmount = subtotal + taxes;
 
@@ -51,12 +53,11 @@ const createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.create({
     guestId,
     hotelId,
-    roomId: roomId || undefined,
+    rooms: rooms,
     checkIn: checkInDate,
     checkOut: checkOutDate,
     nights,
     guests: Number(guests),
-    pricePerNight,
     subtotal,
     taxes,
     totalAmount,
@@ -68,12 +69,13 @@ const createBooking = asyncHandler(async (req, res) => {
   const options = {
     amount: totalAmount * 100,
     currency: "INR",
-    recipt: `booking-${booking._id}`,
+    receipt: `booking-${booking._id}`,
   };
 
   // Razorpay Order
   const razorpayOrder = await razorpayInstance.orders.create(options);
-  if (!order) throw new ApiError(500, "Failed to create razorpay order!");
+  if (!razorpayOrder)
+    throw new ApiError(500, "Failed to create razorpay order!");
 
   // Creating payment
   const payment = await Payment.create({
@@ -84,7 +86,7 @@ const createBooking = asyncHandler(async (req, res) => {
     amount: booking.totalAmount,
     currency: options.currency,
     status: "created",
-    recipt: razorpayOrder.recipt,
+    receipt: razorpayOrder.receipt,
   });
   if (!payment)
     throw new ApiError(500, "Failed to create payment for booking!");
@@ -99,7 +101,7 @@ const createBooking = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         201,
-        { booking, totalAmount, paymentRecipt: payment.recipt },
+        { booking, totalAmount, paymentReceipt: payment.receipt },
         "Booking created successfully!",
       ),
     );
@@ -111,7 +113,7 @@ const getMyBookings = asyncHandler(async (req, res) => {
 
   const bookings = await Booking.find({ guestId })
     .populate("hotelId", "name city state images rating slug")
-    .populate("roomId", "name type")
+    .populate("rooms.roomId", "name type pricePerNight")
     .sort({ createdAt: -1 });
 
   return res
@@ -130,13 +132,13 @@ const getBookingById = asyncHandler(async (req, res) => {
       "hotelId",
       "name city state images rating slug checkInTime checkOutTime",
     )
-    .populate("roomId", "name type pricePerNight");
+    .populate("rooms.roomId", "name type pricePerNight");
   if (!booking) throw new ApiError(404, "Booking not found!");
 
   // Only the guest or admin can view
   if (
     booking.guestId.toString() !== guestId.toString() &&
-    req.user.role !== "ADMIN"
+    req.user.role !== "Admin"
   ) {
     throw new ApiError(403, "You are not allowed to view this booking!");
   }
@@ -246,10 +248,10 @@ const updateBookingStatus = asyncHandler(async (req, res) => {
 });
 
 export {
+  createBooking,
   getAllBookings,
   updateBookingStatus,
   cancelBooking,
-  createBooking,
   getMyBookings,
   getBookingById,
 };
