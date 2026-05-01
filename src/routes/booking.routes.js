@@ -5,14 +5,14 @@ import {
   getAllBookings,
   getBookingById,
   getMyBookings,
-  updateBookingStatus,
+  updateBookingStatus
 } from "../controllers/booking.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
 
-router.route("/create-booking").post(verifyJWT, createBooking);
+router.route("/new").post(verifyJWT, createBooking);
 router
   .route("/bookings")
   .get(verifyJWT, authorizeRoles("Admin"), getAllBookings);

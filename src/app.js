@@ -23,6 +23,7 @@ app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,
+    exposedHeaders: ["Content-Type", "Transfer-Encoding"],
   }),
 );
 app.use(express.json({ limit: "16kb" }));
@@ -38,7 +39,7 @@ app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/hotels", hotelRouter);
 app.use("/api/v1/reviews", reviewRouter);
 app.use("/api/v1/payments", paymentRouter);
-app.use("/api/v1/nestiq", aiRouter);
+app.use("/api/v1/nestiq-ai", aiRouter);
 app.use("/api/v1/rooms", roomRouter);
 
 // 404 error

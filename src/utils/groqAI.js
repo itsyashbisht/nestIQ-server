@@ -5,7 +5,7 @@ const groq = createGroq({
 });
 
 // For streamText — hotel chat, concierge
-export const chatModel = groq("llama-3.1-70b-versatile");
+export const chatModel = groq("llama-3.3-70b-versatile");
 
 // For generateObject — search filters, budget, listing
 export const structuredModel = groq("llama-3.1-8b-instant");

@@ -75,15 +75,15 @@ const createBooking = asyncHandler(async (req, res) => {
   // Razorpay Order
   const razorpayOrder = await razorpayInstance.orders.create(options);
   if (!razorpayOrder)
-    throw new ApiError(500, "Failed to create razorpay order!");
+    throw new ApiError(500, "Failed to create Razorpay order!");
 
   // Creating payment
   const payment = await Payment.create({
-    bookingId: booking._id,
+    bookingId: booking?._id,
     guestId,
     hotelId,
     razorpayOrderId: razorpayOrder.id,
-    amount: booking.totalAmount,
+    amount: booking?.totalAmount,
     currency: options.currency,
     status: "created",
     receipt: razorpayOrder.receipt,
@@ -96,15 +96,18 @@ const createBooking = asyncHandler(async (req, res) => {
     $set: { razorpayOrderId: razorpayOrder.id },
   });
 
-  return res
-    .status(201)
-    .json(
-      new ApiResponse(
-        201,
-        { booking, totalAmount, paymentReceipt: payment.receipt },
-        "Booking created successfully!",
-      ),
-    );
+  return res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        booking,
+        totalAmount,
+        razorpayOrderId: razorpayOrder.id,
+        paymentReceipt: payment.receipt,
+      },
+      "Booking created successfully!",
+    ),
+  );
 });
 
 const getMyBookings = asyncHandler(async (req, res) => {

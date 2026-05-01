@@ -42,9 +42,9 @@ const aiSearch = asyncHandler(async (req, res) => {
   if (object.category) filter.category = object.category;
   if (object.vibe) filter.vibes = { $in: [object.vibe] };
   if (object.minPrice || object.maxPrice) {
-    filter.pricePerNight = {};
-    if (object.minPrice) filter.pricePerNight.$gte = object.minPrice;
-    if (object.maxPrice) filter.pricePerNight.$lte = object.maxPrice;
+    filter.startingFrom = {};
+    if (object.minPrice) filter.startingFrom.$gte = object.minPrice;
+    if (object.maxPrice) filter.startingFrom.$lte = object.maxPrice;
   }
 
   const hotels = await Hotel.find(filter).sort({ rating: -1 }).limit(12);
@@ -63,22 +63,49 @@ const aiSearch = asyncHandler(async (req, res) => {
   );
 });
 
-// Hotel-chat
+// Hotel specific-chat
 const hotelChat = asyncHandler(async (req, res) => {
   const { messages, hotelId } = req.body;
-  if (!messages || !hotelId)
+  if (!messages?.length || !hotelId) {
     throw new ApiError(400, "messages and hotelId are required!");
+  }
 
-  const hotel = await Hotel.findOne({ slug: hotelId });
+  const hotel = await Hotel.findOne(hotelId).select(
+    "name category city state startingFrom rating amenities vibes nearbyAttractions description checkInTime checkOutTime",
+  );
+
   if (!hotel) throw new ApiError(404, "Hotel not found!");
 
-  const result = await streamText({
+  const system = `You are a friendly assistant for ${hotel.name} in ${hotel.city}, ${hotel.state}.
+   Price: ₹${hotel.startingFrom?.toLocaleString("en-IN")}/night.
+   Rating: ${hotel.rating}/5.
+   Check-in: ${hotel.checkInTime} | Check-out: ${hotel.checkOutTime}.
+   Amenities: ${hotel.amenities.join(", ")}.
+   Vibes: ${hotel.vibes.join(", ")}.
+   Nearby: ${hotel.nearbyAttractions?.join(", ") || "N/A"}.
+   About: ${hotel.description}
+   Rules: Answer only about this hotel. 2-4 sentences max. Quote prices in ₹. Never invent availability.`;
+
+  // ✅ No await — stream directly
+  const result = streamText({
     model: chatModel,
-    system: `You are a helpful assistant for ${hotel.name}, a ${hotel.category} hotel in ${hotel.city}, ${hotel.state}. Price: INR ${hotel.pricePerNight}/night. Rating: ${hotel.rating}/5. Amenities: ${hotel.amenities.join(", ")}. Vibes: ${hotel.vibes.join(", ")}. Nearby: ${hotel.nearbyAttractions?.join(", ")}. Answer questions about this hotel honestly and concisely. If you don't know something, say so.`,
+    system,
     messages,
+    maxTokens: 512,
+    temperature: 0.4,
   });
 
-  return result.pipeDataStreamToResponse(res);
+  // ✅ Works on all AI SDK versions
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Transfer-Encoding", "chunked");
+  res.setHeader("Access-Control-Allow-Origin", process.env.CORS_ORIGIN);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+
+  for await (const chunk of result.textStream) {
+    res.write(chunk);
+  }
+
+  res.end();
 });
 
 const budgetPlanner = asyncHandler(async (req, res) => {
@@ -113,8 +140,8 @@ const concierge = asyncHandler(async (req, res) => {
   if (!messages) throw new ApiError(400, "messages are required!");
 
   const result = await streamText({
-    model: structuredModel,
-    system: `You are NestIQ's AI travel concierge for India. Help users plan trips, find the right hotel, estimate budgets, and get travel advice.Be concise, friendly, and India-specific. Always give actionable suggestions.`,
+    model: chatModel,
+    system: `You are NestIQ's AI travel concierge for India. Help users plan trips, find the right hotel, estimate budgets, and get travel advice. Be concise, friendly, and India-specific. Always give actionable suggestions.`,
     messages,
     maxSteps: 3,
     tools: {
@@ -122,22 +149,29 @@ const concierge = asyncHandler(async (req, res) => {
         description: "Search for hotels matching city and filters",
         parameters: z.object({
           city: z.string(),
+          minPrice: z.number().optional(),
           maxPrice: z.number().optional(),
           vibe: z.string().optional(),
+          category: z.string().optional(),
         }),
-        execute: async ({ city, maxPrice, vibe }) => {
+        execute: async ({ city, minPrice, maxPrice, vibe, category }) => {
           const filter = {
             isActive: true,
             city: { $regex: city, $options: "i" },
           };
-          if (maxPrice != null) filter.pricePerNight = { $lte: maxPrice };
+          if (minPrice != null || maxPrice != null) {
+            filter.startingFrom = {};
+            if (minPrice != null) filter.startingFrom.$gte = minPrice;
+            if (maxPrice != null) filter.startingFrom.$lte = maxPrice;
+          }
           if (vibe) filter.vibes = { $in: [vibe] };
+          if (category) filter.category = category;
 
           const hotels = await Hotel.find(filter).limit(4).lean();
           return hotels.map((h) => ({
             name: h.name,
             city: h.city,
-            pricePerNight: h.pricePerNight,
+            startingFrom: h.startingFrom,
             rating: h.rating,
             slug: h.slug,
           }));
@@ -146,7 +180,13 @@ const concierge = asyncHandler(async (req, res) => {
     },
   });
 
-  return result.pipeDataStreamToResponse(res);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  res.setHeader("Transfer-Encoding", "chunked");
+
+  for await (const chunk of result.textStream) {
+    res.write(chunk);
+  }
+  res.end();
 });
 
 const generateListing = asyncHandler(async (req, res) => {

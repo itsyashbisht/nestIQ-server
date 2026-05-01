@@ -15,6 +15,10 @@ const hotelSchema = new Schema(
       lowercase: true,
       trim: true,
     },
+    startingFrom: {
+      type: Number,
+      required: true,
+    },
     description: { type: String, required: true },
     city: { type: String, required: true, index: true },
     state: { type: String, required: true },
@@ -44,7 +48,6 @@ const hotelSchema = new Schema(
       },
     ],
     amenities: [{ type: String }],
-    pricePerNight: { type: Number, required: true },
     rating: { type: Number, default: 4.5, min: 1, max: 5 },
     reviewCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },

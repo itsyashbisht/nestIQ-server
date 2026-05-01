@@ -225,5 +225,5 @@ export const deleteRoom = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Room deleted successfully!"));
+    .json(new ApiResponse(200, roomId, "Room deleted successfully!"));
 });

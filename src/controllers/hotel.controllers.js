@@ -22,15 +22,15 @@ export const getAllHotels = asyncHandler(async (req, res) => {
   if (category) filter.category = category;
   if (vibe) filter.vibes = { $in: [vibe] };
   if (minPrice || maxPrice) {
-    filter.pricePerNight = {};
-    if (minPrice) filter.pricePerNight.$gte = Number(minPrice);
-    if (maxPrice) filter.pricePerNight.$lte = Number(maxPrice);
+    filter.startingFrom = {};
+    if (minPrice) filter.startingFrom.$gte = Number(minPrice);
+    if (maxPrice) filter.startingFrom.$lte = Number(maxPrice);
   }
 
   const sortMap = {
     rating: { rating: -1 },
-    price_asc: { pricePerNight: 1 },
-    price_desc: { pricePerNight: -1 },
+    price_asc: { startingFrom: 1 },
+    price_desc: { startingFrom: -1 },
     newest: { createdAt: -1 },
     relevance: { rating: -1 },
   };
@@ -90,9 +90,9 @@ export const createHotel = asyncHandler(async (req, res) => {
     state,
     address,
     category,
+    startingFrom,
     vibes,
     amenities,
-    pricePerNight,
     nearbyAttractions,
     checkInTime,
     checkOutTime,
@@ -106,11 +106,11 @@ export const createHotel = asyncHandler(async (req, res) => {
     !state ||
     !address ||
     !category ||
-    !pricePerNight
+    !startingFrom
   ) {
     throw new ApiError(
       400,
-      "Required fields: name, slug, description, city, state, address, category, pricePerNight",
+      "Required fields: name, slug, description, city, state, address, category, startingFrom",
     );
   }
 
@@ -136,10 +136,10 @@ export const createHotel = asyncHandler(async (req, res) => {
     state,
     address,
     category,
+    startingFrom: Number(startingFrom),
     vibes: vibes ? JSON.parse(vibes) : [],
     amenities: amenities ? JSON.parse(amenities) : [],
     nearbyAttractions: nearbyAttractions ? JSON.parse(nearbyAttractions) : [],
-    pricePerNight: Number(pricePerNight),
     checkInTime: checkInTime || "14:00",
     checkOutTime: checkOutTime || "11:00",
     images,
@@ -176,9 +176,9 @@ export const updateHotel = asyncHandler(async (req, res) => {
     "state",
     "address",
     "category",
+    "startingFrom",
     "vibes",
     "amenities",
-    "pricePerNight",
     "nearbyAttractions",
     "checkInTime",
     "checkOutTime",
@@ -189,6 +189,10 @@ export const updateHotel = asyncHandler(async (req, res) => {
   allowedUpdates.forEach((field) => {
     if (req.body[field] !== undefined) updates[field] = req.body[field];
   });
+
+  if (updates.startingFrom !== undefined) {
+    updates.startingFrom = Number(updates.startingFrom);
+  }
 
   if (Object.keys(updates).length === 0) {
     throw new ApiError(400, "No valid fields provided for update!");
@@ -228,4 +232,46 @@ export const deleteHotel = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new ApiResponse(200, null, "Hotel deleted successfully!"));
+});
+
+export const addHotelImages = asyncHandler(async (req, res) => {
+  const { hotelId } = req.params;
+  const ownerId = req.user?._id;
+
+  if (!ownerId) throw new ApiError(401, "Unauthorized!");
+  if (!hotelId) throw new ApiError(400, "Hotel ID is required!");
+
+  if (!req.files || req.files.length === 0) {
+    throw new ApiError(400, "No files provided to add!");
+  }
+
+  const hotel = await Hotel.findById(hotelId);
+  if (!hotel) throw new ApiError(404, "Hotel not found!");
+
+  if (hotel.ownerId.toString() !== ownerId.toString()) {
+    throw new ApiError(403, "You are not allowed to update this hotel!");
+  }
+
+  const newImages = [];
+  for (const file of req.files) {
+    const uploaded = await uploadOnCloudinary(file.path);
+    if (!uploaded) throw new ApiError(500, "Failed to upload image!");
+    newImages.push({ url: uploaded?.url, public_id: uploaded?.public_id });
+  }
+
+  const updatedHotel = await Hotel.findByIdAndUpdate(
+    hotelId,
+    {
+      $push: {
+        images: {
+          $each: newImages,
+        },
+      },
+    },
+    { new: true },
+  );
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, updatedHotel, "Images added successfully!"));
 });
