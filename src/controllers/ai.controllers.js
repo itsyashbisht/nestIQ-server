@@ -70,7 +70,7 @@ const hotelChat = asyncHandler(async (req, res) => {
     throw new ApiError(400, "messages and hotelId are required!");
   }
 
-  const hotel = await Hotel.findOne(hotelId).select(
+  const hotel = await Hotel.findById(hotelId).select(
     "name category city state startingFrom rating amenities vibes nearbyAttractions description checkInTime checkOutTime",
   );
 
