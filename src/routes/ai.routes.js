@@ -1,6 +1,5 @@
 import { Router } from "express";
 import {
-  budgetPlanner,
   concierge,
   generateListing,
   hotelChat,
@@ -10,7 +9,6 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 const router = Router();
 
 router.post("/chat", hotelChat);
-router.post("/budget", budgetPlanner);
 router.post("/concierge", concierge);
 router.post("/listing", verifyJWT, generateListing); // owners only
 
