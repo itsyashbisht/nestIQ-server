@@ -1,10 +1,7 @@
 import { Router } from "express";
-import {
-  concierge,
-  generateListing,
-  hotelChat,
-} from "../controllers/ai.controllers.js";
+import { generateListing, hotelChat } from "../controllers/ai.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { concierge } from "../controllers/concierge.controllers.js";
 
 const router = Router();
 
