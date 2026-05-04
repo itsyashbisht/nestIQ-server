@@ -1,4 +1,4 @@
-import { Booking, Hotel, Payment } from "../models/index.js";
+import { Booking, Hotel, Payment, Room } from "../models/index.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -33,17 +33,43 @@ const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Check-in date cannot be in the past!");
   }
 
-  // Get hotel for price
+  // Check that hotel exists.
   const hotel = await Hotel.findById(hotelId);
   if (!hotel) throw new ApiError(404, "Hotel not found!");
   if (!hotel.isActive)
     throw new ApiError(400, "This hotel is no longer available!");
 
+  // Validate rooms.
+  const roomIds = rooms.map((r) => r.roomId);
+  console.log(roomIds);
+
+  const dbRooms = await Room.find({ _id: { $in: roomIds } });
+
+  const validateRooms = rooms.map((r) => {
+    const dbRoom = dbRooms.find(
+      (room) => room._id.toString() === r.roomId.toString(),
+    );
+
+    if (!dbRoom) throw new ApiError(404, "Room not found!");
+    if (!dbRoom.isAvailable) {
+      throw new ApiError(
+        400,
+        `Room "${dbRoom.name}" is currently unavailable!`,
+      );
+    }
+
+    return {
+      roomId: r.roomId,
+      pricePerNight: dbRoom.pricePerNight,
+      quantity: r.quantity,
+    };
+  });
+
   // Calculate pricing
   const nights = Math.ceil(
     (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24),
   );
-  const subtotal = rooms.reduce((sum, room) => {
+  const subtotal = validateRooms.reduce((sum, room) => {
     return sum + room.pricePerNight * room.quantity * nights;
   }, 0);
   const taxes = Math.round(subtotal * GST_RATE);
@@ -53,7 +79,7 @@ const createBooking = asyncHandler(async (req, res) => {
   const booking = await Booking.create({
     guestId,
     hotelId,
-    rooms: rooms,
+    rooms: validateRooms,
     checkIn: checkInDate,
     checkOut: checkOutDate,
     nights,
@@ -93,17 +119,23 @@ const createBooking = asyncHandler(async (req, res) => {
 
   // Save orderId on booking
   await Booking.findByIdAndUpdate(booking._id, {
-    $set: { razorpayOrderId: razorpayOrder.id },
+    $set: { razorpayOrderId: razorpayOrder.id, paymentId: payment._id },
   });
 
   return res.status(201).json(
     new ApiResponse(
       201,
       {
-        booking,
-        totalAmount,
+        bookingId: booking._id,
         razorpayOrderId: razorpayOrder.id,
-        paymentReceipt: payment.receipt,
+        amount: totalAmount, // INR — frontend multiplies by 100 for SDK
+        currency: "INR",
+        receipt: payment.receipt,
+        checkIn: booking.checkIn,
+        checkOut: booking.checkOut,
+        nights: booking.nights,
+        guests: booking.guests,
+        totalAmount: booking.totalAmount, // confirmation screen need this
       },
       "Booking created successfully!",
     ),
@@ -115,13 +147,36 @@ const getMyBookings = asyncHandler(async (req, res) => {
   if (!guestId) throw new ApiError(401, "Unauthorized!");
 
   const bookings = await Booking.find({ guestId })
-    .populate("hotelId", "name city state images rating slug")
-    .populate("rooms.roomId", "name type pricePerNight")
-    .sort({ createdAt: -1 });
+    .populate("hotelId", "name city state images rating slug category")
+    .populate(
+      "rooms.roomId",
+      "name type bedType pricePerNight maxGuests amenities images",
+    )
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const formattedResponse = bookings.map((booking) => {
+    const { hotelId, ...rest } = booking;
+
+    return {
+      ...rest,
+      hotel: hotelId,
+      rooms: booking.rooms.map((r) => {
+        const { roomId, ...roomRest } = r;
+
+        return {
+          ...roomRest,
+          room: roomId,
+        };
+      }),
+    };
+  });
 
   return res
     .status(200)
-    .json(new ApiResponse(200, bookings, "Bookings fetched successfully!"));
+    .json(
+      new ApiResponse(200, formattedResponse, "Bookings fetched successfully!"),
+    );
 });
 
 const getBookingById = asyncHandler(async (req, res) => {
@@ -135,20 +190,32 @@ const getBookingById = asyncHandler(async (req, res) => {
       "hotelId",
       "name city state images rating slug checkInTime checkOutTime",
     )
-    .populate("rooms.roomId", "name type pricePerNight");
-  if (!booking) throw new ApiError(404, "Booking not found!");
+    .populate(
+      "rooms.roomId",
+      "name type pricePerNight bedType maxGuests amenities images",
+    )
+    .lean();
 
-  // Only the guest or admin can view
+  if (!booking) throw new ApiError(404, "Booking not found!");
   if (
     booking.guestId.toString() !== guestId.toString() &&
-    req.user.role !== "Admin"
-  ) {
+    req.user.role !== "Admin" // ← fix role string
+  )
     throw new ApiError(403, "You are not allowed to view this booking!");
-  }
+
+  const { hotelId, ...rest } = booking;
+  const formatted = {
+    ...rest,
+    hotel: hotelId,
+    rooms: booking.rooms.map((r) => {
+      const { roomId, ...roomRest } = r;
+      return { ...roomRest, room: roomId };
+    }),
+  };
 
   return res
     .status(200)
-    .json(new ApiResponse(200, booking, "Booking fetched successfully!"));
+    .json(new ApiResponse(200, formatted, "Booking fetched successfully!"));
 });
 
 const cancelBooking = asyncHandler(async (req, res) => {
@@ -181,18 +248,34 @@ const cancelBooking = asyncHandler(async (req, res) => {
     );
   }
 
+  // cancelBooking — populate after cancel
   const cancelledBooking = await Booking.findByIdAndUpdate(
     bookingId,
     { $set: { status: "cancelled" } },
     { new: true },
-  );
+  )
+    .populate("hotelId", "name city state images rating slug category")
+    .populate(
+      "rooms.roomId",
+      "name type bedType pricePerNight maxGuests amenities images",
+    )
+    .lean();
   if (!cancelledBooking) throw new ApiError(500, "Failed to cancel booking!");
+
+  // Apply same formatting as getMyBookings
+  const { hotelId, ...rest } = cancelledBooking;
+  const formatted = {
+    ...rest,
+    hotel: hotelId,
+    rooms: cancelledBooking.rooms.map((r) => {
+      const { roomId, ...roomRest } = r;
+      return { ...roomRest, room: roomId };
+    }),
+  };
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(200, cancelledBooking, "Booking cancelled successfully!"),
-    );
+    .json(new ApiResponse(200, formatted, "Booking cancelled successfully!"));
 });
 
 const getAllBookings = asyncHandler(async (req, res) => {

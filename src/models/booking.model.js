@@ -26,7 +26,6 @@ const bookingSchema = new Schema(
       type: [bookedRoomSchema],
       required: true,
     }, // ← multi-room
-
     checkIn: {
       type: Date,
       required: true,
@@ -62,7 +61,7 @@ const bookingSchema = new Schema(
       enum: ["pending", "confirmed", "cancelled", "completed"],
       default: "pending",
     },
-
+    paymentId: { type: Schema.Types.ObjectId, ref: "Payment" },
     razorpayOrderId: { type: String, default: "" },
     specialRequests: { type: String, default: "" },
   },
