@@ -28,6 +28,11 @@ const roomSchema = new Schema(
         public_id: String,
       },
     ],
+    bedType: {
+      type: String,
+      enum: ["single", "double", "king", "twin"],
+      required: true,
+    },
     pricePerNight: {
       type: Number,
       required: true,

@@ -8,14 +8,16 @@ import {
   getRoomsByHotel,
   removeRoomImage,
   toggleRoomAvailability,
-  updateRoom,
+  updateRoom
 } from "../controllers/room.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { authorizeRoles } from "../middlewares/role.middleware.js";
 
 const router = Router();
-router.use(verifyJWT);
 
 router.route("/create").post(
+  verifyJWT,
+  authorizeRoles("Admin"),
   createRoom,
   upload.fields([
     {
@@ -24,12 +26,20 @@ router.route("/create").post(
     },
   ]),
 );
-router.route("/delete/:roomId").delete(deleteRoom);
-router.route("/update/:roomId").patch(updateRoom);
+router
+  .route("/delete/:roomId")
+  .delete(verifyJWT, authorizeRoles("Admin", "Owner"), deleteRoom);
+router
+  .route("/update/:roomId")
+  .patch(verifyJWT, authorizeRoles("Admin"), updateRoom);
 router.route("/:roomId").get(getRoomById);
 router.route("/hotel/:hotelId").get(getRoomsByHotel);
-router.route("/:roomId/toggle-room-availability").put(toggleRoomAvailability);
+router
+  .route("/:roomId/toggle-room-availability")
+  .put(verifyJWT, authorizeRoles("Owner"), toggleRoomAvailability);
 router.route("/:roomId/add-images").post(
+  verifyJWT,
+  authorizeRoles("Admin"),
   addRoomImages,
   upload.fields([
     {
@@ -38,6 +48,8 @@ router.route("/:roomId/add-images").post(
     },
   ]),
 );
-router.route("/:roomId/remove-images").delete(removeRoomImage);
+router
+  .route("/:roomId/remove-images")
+  .delete(verifyJWT, authorizeRoles("Admin"), removeRoomImage);
 
 export default router;

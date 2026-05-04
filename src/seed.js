@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
-import { Hotel, Room } from "./models/index.js";
+import { Hotel } from "./models/hotel.model.js";
+import { Room } from "./models/room.model.js";
 
 dotenv.config();
 
@@ -27,8 +28,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=1200&q=85",
-        public_id: "seed_taj_lake_1",
+        url: "https://images.unsplash.com/photo-1566552881560-0be862a7c445?w=1200&q=80",
+        public_id: "h_taj_lake_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=1200&q=80",
+        public_id: "h_taj_lake_2",
       },
     ],
     startingFrom: 18000,
@@ -43,10 +48,10 @@ const HOTELS = [
     name: "Wildflower Hall",
     slug: "wildflower-hall-shimla",
     description:
-      "A former summer retreat of Lord Kitchener perched at 8,250 ft in the Himalayas. Cedar forests, heated plunge pools, and panoramic snow views from every suite.",
+      "Former summer retreat of Lord Kitchener at 8,250 ft. Cedar forests, heated plunge pools, and panoramic snow views from every suite.",
     city: "Shimla",
     state: "Himachal Pradesh",
-    address: "Chharabra, Shimla, Himachal Pradesh 171012",
+    address: "Chharabra, Shimla, HP 171012",
     category: "luxury",
     vibes: ["romantic", "wellness"],
     amenities: [
@@ -57,11 +62,16 @@ const HOTELS = [
       "Restaurant",
       "Free WiFi",
       "Trekking",
+      "Airport Transfer",
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=85",
-        public_id: "seed_wildflower_1",
+        url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
+        public_id: "h_wildflower_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=1200&q=80",
+        public_id: "h_wildflower_2",
       },
     ],
     startingFrom: 14000,
@@ -73,10 +83,10 @@ const HOTELS = [
     nearbyAttractions: ["Jakhu Temple", "The Ridge", "Kufri", "Green Valley"],
   },
   {
-    name: "Coconut Lagoon",
+    name: "Coconut Lagoon Kumarakom",
     slug: "coconut-lagoon-kumarakom",
     description:
-      "An award-winning heritage resort on Vembanad Lake in Kerala. Teak-wood mansions, backwater cruises on private kettuvallams, and Ayurveda at the source.",
+      "Heritage resort on Vembanad Lake. Teak-wood Kerala mansions, backwater kettuvallam cruises, and Ayurveda at the source.",
     city: "Kumarakom",
     state: "Kerala",
     address: "Kumarakom, Kottayam, Kerala 686563",
@@ -93,8 +103,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1200&q=85",
-        public_id: "seed_coconut_1",
+        url: "https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=1200&q=80",
+        public_id: "h_coconut_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80",
+        public_id: "h_coconut_2",
       },
     ],
     startingFrom: 8500,
@@ -113,7 +127,7 @@ const HOTELS = [
     name: "The Leela Goa",
     slug: "leela-goa-cavelossim",
     description:
-      "A 75-acre paradise on the Sal River in South Goa. Lagoon pools wind through Portuguese-style villas leading to a private beach.",
+      "75-acre paradise on the Sal River in South Goa. Lagoon pools wind through Portuguese-style villas leading to a private beach.",
     city: "Goa",
     state: "Goa",
     address: "Mobor, Cavelossim, South Goa 403731",
@@ -130,8 +144,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1200&q=85",
-        public_id: "seed_leela_goa_1",
+        url: "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=1200&q=80",
+        public_id: "h_leela_goa_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=1200&q=80",
+        public_id: "h_leela_goa_2",
       },
     ],
     startingFrom: 12000,
@@ -146,7 +164,7 @@ const HOTELS = [
     name: "Neemrana Fort Palace",
     slug: "neemrana-fort-palace-alwar",
     description:
-      "A 15th-century step-fort hotel on a dramatic escarpment between Delhi and Jaipur. Multiple pools at different elevations, vintage cars, and zip-lining over battlements.",
+      "15th-century step-fort between Delhi and Jaipur. Multiple pools at different elevations, vintage cars, and zip-lining over battlements.",
     city: "Neemrana",
     state: "Rajasthan",
     address: "Neemrana, NH-48, Alwar, Rajasthan 301705",
@@ -163,8 +181,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&q=85",
-        public_id: "seed_neemrana_1",
+        url: "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&q=80",
+        public_id: "h_neemrana_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1587474260584-136574528ed5?w=1200&q=80",
+        public_id: "h_neemrana_2",
       },
     ],
     startingFrom: 5500,
@@ -179,7 +201,7 @@ const HOTELS = [
     name: "Taj Mahal Palace Mumbai",
     slug: "taj-mahal-palace-mumbai",
     description:
-      "The iconic 1903 Taj fronting the Arabian Sea and the Gateway of India. Mumbai's most storied address with 9 restaurants and sea-view suites.",
+      "The iconic 1903 Taj fronting the Arabian Sea. Nine restaurants, the Chambers lounge, and legendary sea-view suites.",
     city: "Mumbai",
     state: "Maharashtra",
     address: "Apollo Bunder, Colaba, Mumbai 400001",
@@ -197,8 +219,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&q=85",
-        public_id: "seed_taj_mumbai_1",
+        url: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&q=80",
+        public_id: "h_taj_mumbai_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&q=80",
+        public_id: "h_taj_mumbai_2",
       },
     ],
     startingFrom: 22000,
@@ -218,7 +244,7 @@ const HOTELS = [
     name: "SwaSwara Gokarna",
     slug: "swaswara-om-beach-gokarna",
     description:
-      "A yoga and wellness sanctuary overlooking Om Beach. Laterite cottages, Ayurveda centre, and a no-phones beach policy that actually works.",
+      "Yoga and wellness sanctuary overlooking Om Beach. Laterite cottages, Ayurveda centre, and a strict no-phones policy that actually works.",
     city: "Gokarna",
     state: "Karnataka",
     address: "Om Beach, Gokarna, Karnataka 581326",
@@ -235,8 +261,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=85",
-        public_id: "seed_swaswara_1",
+        url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80",
+        public_id: "h_swaswara_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1540202404-a2f29016b523?w=1200&q=80",
+        public_id: "h_swaswara_2",
       },
     ],
     startingFrom: 9000,
@@ -245,13 +275,18 @@ const HOTELS = [
     isActive: true,
     checkInTime: "14:00",
     checkOutTime: "11:00",
-    nearbyAttractions: ["Om Beach", "Half Moon Beach", "Gokarna Temple"],
+    nearbyAttractions: [
+      "Om Beach",
+      "Half Moon Beach",
+      "Gokarna Temple",
+      "Kudle Beach",
+    ],
   },
   {
     name: "Alila Fort Bishangarh",
     slug: "alila-fort-bishangarh-jaipur",
     description:
-      "A 230-year-old hilltop fort 45 minutes from Jaipur. Six towers, rooftop pool, and Aravalli views stretching to the horizon.",
+      "230-year-old hilltop fort 45 minutes from Jaipur. Six towers, rooftop pool, Aravalli views to the horizon.",
     city: "Jaipur",
     state: "Rajasthan",
     address: "Bishangarh, Jaipur, Rajasthan 303104",
@@ -268,8 +303,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1519955266818-e3b7e3d55f6d?w=1200&q=85",
-        public_id: "seed_bishangarh_1",
+        url: "https://images.unsplash.com/photo-1519955266818-e3b7e3d55f6d?w=1200&q=80",
+        public_id: "h_bishangarh_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1562790351-d273a961e0e9?w=1200&q=80",
+        public_id: "h_bishangarh_2",
       },
     ],
     startingFrom: 13000,
@@ -278,13 +317,18 @@ const HOTELS = [
     isActive: true,
     checkInTime: "14:00",
     checkOutTime: "12:00",
-    nearbyAttractions: ["Amber Fort", "Nahargarh Fort", "Jaipur Old City"],
+    nearbyAttractions: [
+      "Amber Fort",
+      "Nahargarh Fort",
+      "Jaipur Old City",
+      "Abhaneri Stepwell",
+    ],
   },
   {
     name: "The Windflower Coorg",
     slug: "windflower-spa-resort-coorg",
     description:
-      "A 3-acre coffee estate resort with plantation views, infinity pool over the valley, and Kodava spice-route cuisine.",
+      "3-acre coffee estate resort with plantation views, infinity pool over the valley, and Kodava spice-route cuisine.",
     city: "Coorg",
     state: "Karnataka",
     address: "Gonikoppal Road, Coorg, Karnataka 571201",
@@ -301,8 +345,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1586375300773-8384e3e4916f?w=1200&q=85",
-        public_id: "seed_windflower_1",
+        url: "https://images.unsplash.com/photo-1586375300773-8384e3e4916f?w=1200&q=80",
+        public_id: "h_windflower_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80",
+        public_id: "h_windflower_2",
       },
     ],
     startingFrom: 6500,
@@ -317,7 +365,7 @@ const HOTELS = [
     name: "Rambagh Palace",
     slug: "rambagh-palace-jaipur",
     description:
-      "The Maharaja of Jaipur's former home. 47 acres of Mughal gardens, polo grounds, and a spa in the royal stables.",
+      "Once the Maharaja of Jaipur's residence. 47 acres of Mughal gardens, polo grounds, and a spa in the royal stables.",
     city: "Jaipur",
     state: "Rajasthan",
     address: "Bhawani Singh Road, Jaipur, Rajasthan 302005",
@@ -334,8 +382,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1562790351-d273a961e0e9?w=1200&q=85",
-        public_id: "seed_rambagh_1",
+        url: "https://images.unsplash.com/photo-1580977276076-ae4b8c219b8e?w=1200&q=80",
+        public_id: "h_rambagh_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1445019980597-93fa8acb246c?w=1200&q=80",
+        public_id: "h_rambagh_2",
       },
     ],
     startingFrom: 32000,
@@ -355,7 +407,7 @@ const HOTELS = [
     name: "Zostel Manali",
     slug: "zostel-manali",
     description:
-      "Best-rated backpacker hostel in Manali with mountain views from every dorm, rooftop bonfire deck, and treks to Hampta Pass.",
+      "Best-rated backpacker hostel in Manali. Mountain views from every dorm, rooftop bonfire deck, treks to Hampta Pass.",
     city: "Manali",
     state: "Himachal Pradesh",
     address: "Old Manali Road, Manali, HP 175131",
@@ -372,8 +424,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=85",
-        public_id: "seed_zostel_manali_1",
+        url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80",
+        public_id: "h_zostel_manali_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&q=80",
+        public_id: "h_zostel_manali_2",
       },
     ],
     startingFrom: 700,
@@ -388,7 +444,7 @@ const HOTELS = [
     name: "The Paul Bangalore",
     slug: "paul-bangalore",
     description:
-      "Contemporary design hotel in Bangalore with handcrafted furniture, 6000 sq ft spa, rooftop pool, and one of the city's best French restaurants.",
+      "Contemporary design hotel with handcrafted furniture, 6000 sq ft spa, rooftop infinity pool, and one of Bangalore's best French restaurants.",
     city: "Bangalore",
     state: "Karnataka",
     address: "Domlur, Bengaluru, Karnataka 560071",
@@ -405,8 +461,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=85",
-        public_id: "seed_paul_blr_1",
+        url: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80",
+        public_id: "h_paul_blr_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1568084680786-a84f91d1153c?w=1200&q=80",
+        public_id: "h_paul_blr_2",
       },
     ],
     startingFrom: 8000,
@@ -415,16 +475,21 @@ const HOTELS = [
     isActive: true,
     checkInTime: "14:00",
     checkOutTime: "12:00",
-    nearbyAttractions: ["Indiranagar", "MG Road", "Cubbon Park"],
+    nearbyAttractions: [
+      "Indiranagar",
+      "MG Road",
+      "Cubbon Park",
+      "UB City Mall",
+    ],
   },
   {
     name: "Zostel Varanasi",
     slug: "zostel-varanasi",
     description:
-      "Rooftop hostel directly overlooking the Ganges. Ghat views from every bed, Ganga aarti from the terrace, and daily boat rides.",
+      "Rooftop hostel overlooking the Ganges in old Varanasi. Ghat views from every bed, Ganga aarti from the terrace, daily boat rides.",
     city: "Varanasi",
     state: "Uttar Pradesh",
-    address: "Meer Ghat, Varanasi, Uttar Pradesh 221001",
+    address: "Meer Ghat, Varanasi, UP 221001",
     category: "budget",
     vibes: ["solo", "adventure"],
     amenities: [
@@ -437,8 +502,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1561361058-c24e021b7d83?w=1200&q=85",
-        public_id: "seed_zostel_var_1",
+        url: "https://images.unsplash.com/photo-1561361058-c24e021b7d83?w=1200&q=80",
+        public_id: "h_zostel_var_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1529170335054-5abb0f4b9d78?w=1200&q=80",
+        public_id: "h_zostel_var_2",
       },
     ],
     startingFrom: 600,
@@ -457,7 +526,7 @@ const HOTELS = [
     name: "Coco Shambhala Goa",
     slug: "coco-shambhala-north-goa",
     description:
-      "Private villa boutique in Assagao, North Goa. Bougainvillea-draped, salt-pool centred, deliberately low-key. 8 villas, farm-to-table kitchen, zero noise policy.",
+      "Private villa boutique in Assagao, North Goa. Salt pool, farm-to-table kitchen, zero noise policy.",
     city: "Goa",
     state: "Goa",
     address: "Assagao, Bardez, North Goa 403507",
@@ -474,8 +543,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?w=1200&q=85",
-        public_id: "seed_coco_1",
+        url: "https://images.unsplash.com/photo-1540202404-a2f29016b523?w=1200&q=80",
+        public_id: "h_coco_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&q=80",
+        public_id: "h_coco_2",
       },
     ],
     startingFrom: 11000,
@@ -507,8 +580,12 @@ const HOTELS = [
     ],
     images: [
       {
-        url: "https://images.unsplash.com/photo-1529170335054-5abb0f4b9d78?w=1200&q=85",
-        public_id: "seed_zostel_rk_1",
+        url: "https://images.unsplash.com/photo-1472396961693-142e6e269027?w=1200&q=80",
+        public_id: "h_zostel_rk_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1482192505345-5852310b3b6d?w=1200&q=80",
+        public_id: "h_zostel_rk_2",
       },
     ],
     startingFrom: 650,
@@ -517,29 +594,112 @@ const HOTELS = [
     isActive: true,
     checkInTime: "12:00",
     checkOutTime: "10:00",
-    nearbyAttractions: ["Laxman Jhula", "Triveni Ghat", "Neer Garh Waterfall"],
+    nearbyAttractions: [
+      "Laxman Jhula",
+      "Triveni Ghat",
+      "Neer Garh Waterfall",
+      "Beatles Ashram",
+    ],
+  },
+  {
+    name: "Taj Connemara Chennai",
+    slug: "taj-connemara-chennai",
+    description:
+      "Chennai's oldest luxury hotel — an 1854 heritage building with colonnaded verandahs, celebrated jazz bar, and the famous Raintree restaurant.",
+    city: "Chennai",
+    state: "Tamil Nadu",
+    address: "2 Binny Road, Chennai, Tamil Nadu 600002",
+    category: "luxury",
+    vibes: ["business", "family"],
+    amenities: [
+      "Heritage Architecture",
+      "Pool",
+      "Spa",
+      "Jazz Bar",
+      "Restaurant",
+      "Free WiFi",
+      "Business Centre",
+    ],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=1200&q=80",
+        public_id: "h_connemara_1",
+      },
+      {
+        url: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=1200&q=80",
+        public_id: "h_connemara_2",
+      },
+    ],
+    startingFrom: 13500,
+    rating: 4.7,
+    reviewCount: 267,
+    isActive: true,
+    checkInTime: "14:00",
+    checkOutTime: "12:00",
+    nearbyAttractions: [
+      "Marina Beach",
+      "Fort St. George",
+      "Kapaleeshwarar Temple",
+    ],
   },
 ];
 
+// ─── Room images keyed by type ────────────────────────────────────────────────
+
+const RIMGS = {
+  dormitory: [
+    {
+      url: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80",
+      public_id: "r_dorm_1",
+    },
+  ],
+  standard: [
+    {
+      url: "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=800&q=80",
+      public_id: "r_std_1",
+    },
+  ],
+  deluxe: [
+    {
+      url: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&q=80",
+      public_id: "r_dlx_1",
+    },
+  ],
+  suite: [
+    {
+      url: "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?w=800&q=80",
+      public_id: "r_ste_1",
+    },
+  ],
+  villa: [
+    {
+      url: "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=800&q=80",
+      public_id: "r_vil_1",
+    },
+  ],
+};
+
 // ─── Room generator ───────────────────────────────────────────────────────────
-// hotel.startingFrom = cheapest room price (standard/dorm)
-// All other rooms priced as multipliers of that base
 
 function generateRooms(hotel) {
   const c = hotel.category;
-  const b = hotel.startingFrom; // base = cheapest room
+  const b = hotel.startingFrom; // base price = cheapest room
   const rooms = [];
 
-  // Room 1 — Entry level
   if (c === "budget") {
+    // Dorm + Private + Family
     rooms.push({
       hotelId: hotel._id,
       name: "Dorm Bed",
       type: "dormitory",
+      bedType: "single",
       description:
-        "Pod-style bunk in a clean shared dorm with individual locker, reading light, USB charging, curtain privacy, and shared bathrooms on each floor.",
+        "Pod-style bunk with individual locker, reading light, USB charging, and curtain privacy. Clean shared bathrooms on each floor.",
       pricePerNight: b,
       maxGuests: 1,
+      totalRooms: 20,
+      isAvailable: true,
+      images: RIMGS.dormitory,
       amenities: [
         "Free WiFi",
         "Locker",
@@ -548,43 +708,19 @@ function generateRooms(hotel) {
         "AC",
         "USB Charging",
       ],
-      isAvailable: true,
-      totalRooms: 20,
-      images: [],
     });
-  } else {
-    rooms.push({
-      hotelId: hotel._id,
-      name: "Standard Room",
-      type: "standard",
-      description:
-        "A well-appointed room with quality bedding, en-suite bathroom, reliable WiFi, and all essentials for a comfortable stay.",
-      pricePerNight: b,
-      maxGuests: 2,
-      amenities: [
-        "Free WiFi",
-        "AC",
-        "LED TV",
-        "En-suite Bathroom",
-        "Work Desk",
-        "Safe",
-      ],
-      isAvailable: true,
-      totalRooms: c === "luxury" ? 8 : 6,
-      images: [],
-    });
-  }
-
-  // Room 2 — Mid tier
-  if (c === "budget") {
     rooms.push({
       hotelId: hotel._id,
       name: "Private Room",
       type: "standard",
+      bedType: "double",
       description:
-        "A private en-suite double room — the step up from dorms when you need your own space without luxury prices.",
+        "Clean private en-suite double room — the step up from dorms when you need your own space without luxury prices.",
       pricePerNight: Math.round(b * 2.4),
       maxGuests: 2,
+      totalRooms: 8,
+      isAvailable: true,
+      images: RIMGS.standard,
       amenities: [
         "Free WiFi",
         "AC",
@@ -593,93 +729,119 @@ function generateRooms(hotel) {
         "Wardrobe",
         "Safe",
       ],
-      isAvailable: true,
-      totalRooms: 8,
-      images: [],
     });
-  } else {
-    rooms.push({
-      hotelId: hotel._id,
-      name: "Deluxe Room",
-      type: "deluxe",
-      description:
-        "More space, upgraded bath amenities, premium toiletries, and better views. The most popular choice at this property.",
-      pricePerNight: Math.round(b * 1.65),
-      maxGuests: 3,
-      amenities: [
-        "Free WiFi",
-        "AC",
-        "Smart TV",
-        "Mini Bar",
-        "Premium Toiletries",
-        "Work Desk",
-        "View",
-      ],
-      isAvailable: true,
-      totalRooms: c === "luxury" ? 6 : 5,
-      images: [],
-    });
-  }
-
-  // Room 3 — Suite / Family
-  if (c === "budget") {
     rooms.push({
       hotelId: hotel._id,
       name: "Family Room",
       type: "suite",
+      bedType: "twin",
       description:
-        "Spacious private room with two queen beds, extra storage, and en-suite bathroom. Best for families or groups of three.",
-      pricePerNight: Math.round(b * 3.8),
+        "Spacious room with two queen beds and en-suite bathroom — ideal for families or groups of 3-4.",
+      pricePerNight: Math.round(b * 4.2),
       maxGuests: 4,
+      totalRooms: 4,
+      isAvailable: true,
+      images: RIMGS.suite,
       amenities: [
         "Free WiFi",
         "AC",
         "TV",
-        "Two Queen Beds",
+        "Two Beds",
         "En-suite Bathroom",
         "Extra Storage",
+        "Safe",
       ],
-      isAvailable: true,
-      totalRooms: 4,
-      images: [],
     });
-  } else {
-    rooms.push({
-      hotelId: hotel._id,
-      name: c === "luxury" ? "Luxury Suite" : "Heritage Suite",
-      type: "suite",
-      description:
-        c === "luxury"
-          ? "A sprawling suite with separate living area, premium bar, soaking tub, and signature property views."
-          : "The most distinctive room — largest footprint, best views, fully personalised service.",
-      pricePerNight: Math.round(b * 2.8),
-      maxGuests: 4,
-      amenities: [
-        "Free WiFi",
-        "AC",
-        "Smart TV",
-        "Living Area",
-        "Mini Bar",
-        "Soaking Tub",
-        "Premium Toiletries",
-        "Concierge",
-      ],
-      isAvailable: true,
-      totalRooms: c === "luxury" ? 4 : 3,
-      images: [],
-    });
+    return rooms;
   }
 
-  // Room 4 — Top tier (luxury + boutique only)
+  // Non-budget: Standard + Deluxe + Suite + Villa
+  rooms.push({
+    hotelId: hotel._id,
+    name: "Standard Room",
+    type: "standard",
+    bedType: "double",
+    description:
+      "Well-appointed room with quality bedding, en-suite bathroom, and reliable WiFi. Everything needed for a comfortable stay.",
+    pricePerNight: b,
+    maxGuests: 2,
+    totalRooms: c === "luxury" ? 8 : 6,
+    isAvailable: true,
+    images: RIMGS.standard,
+    amenities: [
+      "Free WiFi",
+      "AC",
+      "LED TV",
+      "En-suite Bathroom",
+      "Work Desk",
+      "Safe",
+      "Mini Fridge",
+    ],
+  });
+
+  rooms.push({
+    hotelId: hotel._id,
+    name: "Deluxe Room",
+    type: "deluxe",
+    bedType: "king",
+    description:
+      "More space, premium toiletries, upgraded bath amenities, and better views. The most popular choice at this property.",
+    pricePerNight: Math.round(b * 1.65),
+    maxGuests: 3,
+    totalRooms: c === "luxury" ? 6 : 5,
+    isAvailable: true,
+    images: RIMGS.deluxe,
+    amenities: [
+      "Free WiFi",
+      "AC",
+      "Smart TV",
+      "Mini Bar",
+      "Premium Toiletries",
+      "Work Desk",
+      "View",
+      "Safe",
+    ],
+  });
+
+  rooms.push({
+    hotelId: hotel._id,
+    name: c === "luxury" ? "Luxury Suite" : "Heritage Suite",
+    type: "suite",
+    bedType: "king",
+    description:
+      c === "luxury"
+        ? "Sprawling suite with separate living area, premium bar, soaking tub, and signature property views."
+        : "Most distinctive room — largest footprint, best views, fully personalised service.",
+    pricePerNight: Math.round(b * 2.8),
+    maxGuests: 4,
+    totalRooms: c === "luxury" ? 4 : 3,
+    isAvailable: true,
+    images: RIMGS.suite,
+    amenities: [
+      "Free WiFi",
+      "AC",
+      "Smart TV",
+      "Living Area",
+      "Mini Bar",
+      "Soaking Tub",
+      "Premium Toiletries",
+      "Concierge",
+    ],
+  });
+
   if (c === "luxury") {
     rooms.push({
       hotelId: hotel._id,
       name: "Private Villa",
       type: "villa",
+      bedType: "king",
       description:
-        "Standalone villa with private plunge pool, personal butler, full kitchen, and the entire estate experience. Maximum privacy.",
+        "Standalone villa with private plunge pool, personal butler, full kitchen, and total privacy. The pinnacle experience.",
       pricePerNight: Math.round(b * 4.8),
       maxGuests: 6,
+      totalRooms: 2,
+      isAvailable: true,
+      images: RIMGS.villa,
       amenities: [
         "Private Pool",
         "Butler Service",
@@ -687,12 +849,8 @@ function generateRooms(hotel) {
         "Private Garden",
         "Premium Bar",
         "Free WiFi",
-        "Concierge",
         "Breakfast Included",
       ],
-      isAvailable: true,
-      totalRooms: 2,
-      images: [],
     });
   }
 
@@ -701,10 +859,14 @@ function generateRooms(hotel) {
       hotelId: hotel._id,
       name: "Signature Villa",
       type: "villa",
+      bedType: "king",
       description:
-        "Crown jewel of the property — private garden, outdoor shower, curated minibar, and bespoke daily itinerary from the concierge.",
+        "Crown jewel of the property — private garden, outdoor shower, curated minibar, and bespoke concierge experience.",
       pricePerNight: Math.round(b * 3.5),
       maxGuests: 4,
+      totalRooms: 2,
+      isAvailable: true,
+      images: RIMGS.villa,
       amenities: [
         "Private Garden",
         "Outdoor Shower",
@@ -712,11 +874,7 @@ function generateRooms(hotel) {
         "Concierge",
         "Free WiFi",
         "Personalised Breakfast",
-        "Premium Toiletries",
       ],
-      isAvailable: true,
-      totalRooms: 2,
-      images: [],
     });
   }
 
@@ -745,7 +903,7 @@ async function seed() {
 
     console.log("🏨 Inserting hotels...");
     const inserted = await Hotel.insertMany(HOTELS);
-    console.log(`  ✅ ${inserted.length} hotels inserted\n`);
+    console.log(`   ✅ ${inserted.length} hotels\n`);
 
     console.log("🛏️  Inserting rooms...");
     let totalRooms = 0;
