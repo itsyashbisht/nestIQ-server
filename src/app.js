@@ -18,13 +18,12 @@ if (!process.env.CORS_ORIGIN) {
 }
 
 // MIDDLEWARES
+app.set("trust proxy", 1);
 app.use(cookieParser());
 app.use(
   cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true,
-    secure: true,
-    sameSite: false,
     exposedHeaders: ["Content-Type", "Transfer-Encoding"],
   }),
 );

@@ -1,8 +1,8 @@
 import jwt from "jsonwebtoken";
-import { User } from "../models/index.js";
-import { ApiError } from "../utils/apiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiResponse } from "../utils/apiResponse.js";
+import {User} from "../models/index.js";
+import {ApiError} from "../utils/apiError.js";
+import {asyncHandler} from "../utils/asyncHandler.js";
+import {ApiResponse} from "../utils/apiResponse.js";
 import crypto from "crypto";
 
 const generateAccessAndRefreshToken = async (userId) => {
@@ -138,6 +138,7 @@ const login = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "none",
   };
 
   return res
