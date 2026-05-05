@@ -41,8 +41,6 @@ const createBooking = asyncHandler(async (req, res) => {
 
   // Validate rooms.
   const roomIds = rooms.map((r) => r.roomId);
-  console.log(roomIds);
-
   const dbRooms = await Room.find({ _id: { $in: roomIds } });
 
   const validateRooms = rooms.map((r) => {

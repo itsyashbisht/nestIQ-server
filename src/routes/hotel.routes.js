@@ -10,14 +10,23 @@ import {
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { authorizeRoles } from "../middlewares/role.middleware.js";
 import { aiSearch } from "../controllers/ai.controllers.js";
+import { upload } from "../middlewares/multer.middleware.js";
 
 const router = Router();
 
 router.route("/all").get(getAllHotels);
 router.post("/search", aiSearch);
-router
-  .route("/create")
-  .post(verifyJWT, authorizeRoles("Owner", "Admin"), createHotel);
+router.route("/create").post(
+  verifyJWT,
+  authorizeRoles("Owner", "Admin"),
+  createHotel,
+  upload.fields([
+    {
+      name: "images",
+      maxCount: 7,
+    },
+  ]),
+);
 router.route("/slug/:slug").get(getHotelBySlug);
 router.route("/:hotelId").get(getHotelById);
 router

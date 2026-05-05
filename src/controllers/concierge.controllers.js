@@ -12,13 +12,6 @@ const groq = new Groq({
 const MODEL = "llama-3.3-70b-versatile";
 
 async function searchHotelsImpl({ city, vibe, category, maxPrice }) {
-  console.log("🔍 searchHotels CALLED with:", {
-    city,
-    vibe,
-    category,
-    maxPrice,
-  });
-
   const filter = {
     isActive: true,
     city: { $regex: city, $options: "i" },
@@ -57,8 +50,6 @@ async function searchHotelsImpl({ city, vibe, category, maxPrice }) {
 }
 
 async function getRoomsImpl({ hotelId, hotelName, hotelSlug }) {
-  console.log("🏨 getRooms CALLED with:", { hotelId, hotelName, hotelSlug });
-
   try {
     const objectId = new mongoose.Types.ObjectId(hotelId);
     const rooms = await Room.find({ hotelId: objectId, isAvailable: true })
@@ -302,7 +293,6 @@ const tools = [
 
 const concierge = asyncHandler(async (req, res) => {
   const { messages } = req.body;
-  console.log("🎯 CONCIERGE START - Received messages:", messages);
 
   if (!messages || !messages.length) {
     throw new ApiError(400, "messages are required!");
