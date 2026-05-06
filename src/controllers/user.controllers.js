@@ -1,9 +1,15 @@
 import jwt from "jsonwebtoken";
-import {User} from "../models/index.js";
-import {ApiError} from "../utils/apiError.js";
-import {asyncHandler} from "../utils/asyncHandler.js";
-import {ApiResponse} from "../utils/apiResponse.js";
+import { User } from "../models/index.js";
+import { ApiError } from "../utils/apiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/apiResponse.js";
 import crypto from "crypto";
+
+const options = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none",
+};
 
 const generateAccessAndRefreshToken = async (userId) => {
   try {
@@ -45,11 +51,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
     const { accessToken, refreshToken: newRefreshToken } =
       await generateAccessAndRefreshToken(user._id);
-
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
 
     return res
       .status(200)
@@ -135,17 +136,17 @@ const login = asyncHandler(async (req, res) => {
   );
   if (!loggedInUser) throw new ApiError(401, "Failed to login!");
 
-  const options = {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-  };
-
   return res
     .status(200)
     .cookie("accessToken", accessToken, options)
     .cookie("refreshToken", refreshToken, options)
-    .json(new ApiResponse(200, loggedInUser, "Successfully logged in!"));
+    .json(
+      new ApiResponse(
+        200,
+        { user: loggedInUser, accessToken },
+        "Successfully logged in!",
+      ),
+    );
 });
 
 const logout = asyncHandler(async (req, res) => {
@@ -157,8 +158,6 @@ const logout = asyncHandler(async (req, res) => {
     { $unset: { refreshToken: 1 } },
     { new: true },
   );
-
-  const options = { httpOnly: true, secure: true };
 
   return res
     .status(200)
