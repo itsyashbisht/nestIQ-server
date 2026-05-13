@@ -1,38 +1,44 @@
 import mongoose from "mongoose";
 import { Groq } from "groq-sdk";
 import { ApiError } from "../utils/apiError.js";
-import { Hotel, Room } from "../models/index.js";
+import { Booking, Hotel, Room } from "../models/index.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { injectHotelsMarker, injectRoomsMarker } from "../utils/conciergeMarker.js";
+import { injectBookingLinkMarker, injectHotelsMarker, injectRoomsMarker } from "../utils/conciergeMarker.js";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = "llama-3.3-70b-versatile";
 
-async function searchHotelsImpl({ city, vibe, category, maxPrice }) {
-  const filter = {
-    isActive: true,
-    city: { $regex: city, $options: "i" },
-  };
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function validateDates(checkIn, checkOut) {
+  const i = new Date(checkIn);
+  const o = new Date(checkOut);
+  if (isNaN(i.getTime()) || isNaN(o.getTime()))
+    return "Invalid dates. Use YYYY-MM-DD.";
+  if (o <= i) return "Check-out must be after check-in.";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (i < today) return "Check-in cannot be in the past.";
+  return null;
+}
 
+// ─── Tool implementations ─────────────────────────────────────────────────────
+async function searchHotelsImpl({ city, vibe, category, maxPrice }) {
+  const filter = { isActive: true, city: { $regex: city, $options: "i" } };
   if (vibe) filter.vibes = { $in: [vibe] };
   if (category) filter.category = category;
   if (maxPrice) filter.startingFrom = { $lte: maxPrice };
 
   const hotels = await Hotel.find(filter)
-    .select("_id name slug city category vibes startingFrom rating amenities")
+    .select("_id name slug city category vibes startingFrom rating")
     .sort({ rating: -1 })
     .limit(4)
     .lean();
 
-  if (!hotels.length) {
+  if (!hotels.length)
     return JSON.stringify({
       found: false,
-      message: `No hotels found in ${city} with those filters.`,
+      message: `No hotels found in ${city}.`,
     });
-  }
 
   return JSON.stringify({
     found: true,
@@ -51,18 +57,19 @@ async function searchHotelsImpl({ city, vibe, category, maxPrice }) {
 
 async function getRoomsImpl({ hotelId, hotelName, hotelSlug }) {
   try {
-    const objectId = new mongoose.Types.ObjectId(hotelId);
-    const rooms = await Room.find({ hotelId: objectId, isAvailable: true })
+    const rooms = await Room.find({
+      hotelId: new mongoose.Types.ObjectId(hotelId),
+      isAvailable: true,
+    })
       .select("_id name type pricePerNight maxGuests amenities")
       .sort({ pricePerNight: 1 })
       .lean();
 
-    if (!rooms.length) {
+    if (!rooms.length)
       return JSON.stringify({
         found: false,
-        message: `No available rooms at ${hotelName} right now.`,
+        message: `No available rooms at ${hotelName}.`,
       });
-    }
 
     return JSON.stringify({
       found: true,
@@ -75,127 +82,264 @@ async function getRoomsImpl({ hotelId, hotelName, hotelSlug }) {
         pricePerNight: r.pricePerNight,
         maxGuests: r.maxGuests,
         amenities: r.amenities,
-        bookingLink: `/hotels/${hotelSlug}?roomId=${r._id}`,
       })),
     });
-  } catch (error) {
-    console.error("Error in getRooms:", error);
-    return JSON.stringify({
-      found: false,
-      message: `Error fetching rooms: ${error.message}`,
-    });
+  } catch (err) {
+    return JSON.stringify({ found: false, message: err.message });
   }
 }
 
-function estimateBudgetImpl({
-  city,
-  nights,
+async function checkRoomAvailabilityImpl({
+  roomId,
+  checkIn,
+  checkOut,
   guests,
-  pricePerNight,
-  hotelCategory,
 }) {
-  console.log("💰 estimateBudget CALLED with:", {
-    city,
-    nights,
-    guests,
-    pricePerNight,
-    hotelCategory,
-  });
+  try {
+    const dateErr = validateDates(checkIn, checkOut);
+    if (dateErr) return JSON.stringify({ available: false, message: dateErr });
 
-  const CITY_DATA = {
-    mumbai: { food: 1600, local: 900, activities: 700 },
-    delhi: { food: 1400, local: 800, activities: 800 },
-    bangalore: { food: 1500, local: 850, activities: 500 },
-    goa: { food: 1300, local: 500, activities: 800 },
-    jaipur: { food: 1000, local: 600, activities: 900 },
-    udaipur: { food: 1100, local: 650, activities: 700 },
-    jaisalmer: { food: 900, local: 550, activities: 1000 },
-    jodhpur: { food: 950, local: 550, activities: 800 },
-    ajabgarh: { food: 900, local: 700, activities: 600 },
-    neemrana: { food: 850, local: 600, activities: 500 },
-    ranthambore: { food: 900, local: 700, activities: 1500 },
-    manali: { food: 900, local: 800, activities: 1200 },
-    shimla: { food: 850, local: 750, activities: 600 },
-    coorg: { food: 800, local: 700, activities: 700 },
-    kumarakom: { food: 900, local: 600, activities: 1200 },
-    kochi: { food: 1000, local: 650, activities: 700 },
-    rishikesh: { food: 650, local: 350, activities: 600 },
-    varanasi: { food: 600, local: 350, activities: 400 },
-    gokarna: { food: 700, local: 400, activities: 400 },
-    chennai: { food: 1100, local: 700, activities: 500 },
-    puducherry: { food: 800, local: 400, activities: 400 },
-    valparai: { food: 700, local: 500, activities: 600 },
-  };
+    const room = await Room.findById(roomId)
+      .select("name pricePerNight maxGuests hotelId")
+      .lean();
+    if (!room)
+      return JSON.stringify({ available: false, message: "Room not found." });
 
-  const TIER_MULTIPLIER = {
-    budget: 0.65,
-    comfort: 1.0,
-    boutique: 1.3,
-    luxury: 1.8,
-  };
+    // Capacity issue — return alternatives
+    if (guests > room.maxGuests) {
+      const alts = await Room.find({
+        hotelId: room.hotelId,
+        isAvailable: true,
+        maxGuests: { $gte: guests },
+      })
+        .select("_id name type pricePerNight maxGuests amenities")
+        .sort({ pricePerNight: 1 })
+        .lean();
 
-  const cityKey = Object.keys(CITY_DATA).find(
-    (k) => city.toLowerCase().includes(k) || k.includes(city.toLowerCase()),
+      return JSON.stringify({
+        available: false,
+        guestCapacityIssue: true,
+        requestedGuests: guests,
+        roomMaxGuests: room.maxGuests,
+        alternatives: alts.map((r) => ({
+          _id: r._id.toString(),
+          name: r.name,
+          type: r.type,
+          pricePerNight: r.pricePerNight,
+          maxGuests: r.maxGuests,
+          amenities: r.amenities,
+        })),
+      });
+    }
+
+    const overlap = await Booking.findOne({
+      "rooms.roomId": new mongoose.Types.ObjectId(roomId),
+      status: { $nin: ["cancelled"] },
+      checkIn: { $lt: new Date(checkOut) },
+      checkOut: { $gt: new Date(checkIn) },
+    });
+
+    if (overlap)
+      return JSON.stringify({
+        available: false,
+        message: "Room is booked for those dates. Try different dates.",
+      });
+
+    const nights = Math.ceil(
+      (new Date(checkOut) - new Date(checkIn)) / 86400000,
+    );
+    return JSON.stringify({
+      available: true,
+      nights,
+      room: {
+        _id: room._id.toString(),
+        name: room.name,
+        pricePerNight: room.pricePerNight,
+        maxGuests: room.maxGuests,
+      },
+    });
+  } catch (err) {
+    return JSON.stringify({ available: false, message: err.message });
+  }
+}
+
+async function calculateBookingPriceImpl({
+  roomId,
+  checkIn,
+  checkOut,
+  guests,
+}) {
+  try {
+    const room = await Room.findById(roomId)
+      .select("pricePerNight name")
+      .lean();
+    if (!room)
+      return JSON.stringify({ calculated: false, message: "Room not found." });
+
+    const nights = Math.ceil(
+      (new Date(checkOut) - new Date(checkIn)) / 86400000,
+    );
+    const base = room.pricePerNight * nights;
+    const tax = Math.round(base * 0.12);
+    const total = base + tax;
+
+    return JSON.stringify({
+      calculated: true,
+      nights,
+      roomName: room.name,
+      breakdown: [
+        `🏨 Room (${nights}N × ₹${room.pricePerNight.toLocaleString("en-IN")}): ₹${base.toLocaleString("en-IN")}`,
+        `📊 GST (12%): ₹${tax.toLocaleString("en-IN")}`,
+        `💰 Total: ₹${total.toLocaleString("en-IN")}`,
+        `👤 Per person: ₹${Math.round(total / guests).toLocaleString("en-IN")}`,
+      ].join("\n"),
+      summary: {
+        baseAmount: base,
+        taxAmount: tax,
+        gstRate: 12,
+        totalAmount: total,
+        currency: "INR",
+      },
+    });
+  } catch (err) {
+    return JSON.stringify({ calculated: false, message: err.message });
+  }
+}
+
+function generateBookingLinkImpl({
+  hotelSlug,
+  roomId,
+  roomName,
+  pricePerNight,
+  checkIn,
+  checkOut,
+  guestCount,
+}) {
+  const missing = [
+    "hotelSlug",
+    "roomId",
+    "roomName",
+    "pricePerNight",
+    "checkIn",
+    "checkOut",
+    "guestCount",
+  ].filter(
+    (k) =>
+      !{
+        hotelSlug,
+        roomId,
+        roomName,
+        pricePerNight,
+        checkIn,
+        checkOut,
+        guestCount,
+      }[k],
   );
-  const base = CITY_DATA[cityKey] ?? {
-    food: 1000,
-    local: 600,
-    activities: 600,
-  };
-  const tier = TIER_MULTIPLIER[hotelCategory] ?? 1.0;
+  if (missing.length)
+    return JSON.stringify({
+      generated: false,
+      message: `Missing: ${missing.join(", ")}`,
+    });
 
-  const foodPPPD = Math.round(base.food * tier);
-  const localPPPD = Math.round(base.local * tier);
-  const activitiesPPPD = Math.round(base.activities * tier);
+  const e = validateDates(checkIn, checkOut);
+  if (e) return JSON.stringify({ generated: false, message: e });
 
-  const hotelCost = pricePerNight * nights;
-  const foodCost = foodPPPD * guests * nights;
-  const localCost = localPPPD * guests * nights;
-  const activitiesCost = activitiesPPPD * guests * nights;
-  const total = hotelCost + foodCost + localCost + activitiesCost;
-
+  const p = new URLSearchParams({
+    roomId,
+    roomName,
+    pricePerNight: String(pricePerNight),
+    checkIn,
+    checkOut,
+    guests: String(guestCount),
+  });
   return JSON.stringify({
-    nights,
-    guests,
-    hotelCost,
-    foodCost,
-    localTransportCost: localCost,
-    activitiesCost,
-    total,
-    perPerson: Math.round(total / guests),
-    perPersonPerDay: Math.round(total / guests / nights),
-    breakdown: [
-      `🏨 Hotel:       ₹${hotelCost.toLocaleString("en-IN")} (₹${pricePerNight.toLocaleString("en-IN")}/night × ${nights} nights)`,
-      `🍽️  Food:        ₹${foodCost.toLocaleString("en-IN")} (₹${foodPPPD.toLocaleString("en-IN")}/person/day)`,
-      `🚗 Transport:   ₹${localCost.toLocaleString("en-IN")} (₹${localPPPD.toLocaleString("en-IN")}/person/day)`,
-      `🎯 Activities:  ₹${activitiesCost.toLocaleString("en-IN")} (₹${activitiesPPPD.toLocaleString("en-IN")}/person/day)`,
-      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
-      `💰 Total:       ₹${total.toLocaleString("en-IN")}`,
-      `👤 Per person:  ₹${Math.round(total / guests).toLocaleString("en-IN")}`,
-    ].join("\n"),
+    generated: true,
+    link: `/hotels/${hotelSlug}/book?${p.toString()}`,
   });
 }
 
-const availableFunctions = {
+const TOOLS = {
   searchHotels: searchHotelsImpl,
   getRooms: getRoomsImpl,
-  estimateBudget: estimateBudgetImpl,
+  checkRoomAvailability: checkRoomAvailabilityImpl,
+  calculateBookingPrice: calculateBookingPriceImpl,
+  generateBookingLink: generateBookingLinkImpl,
 };
 
-const tools = [
+// ─── System prompt ────────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are NestIQ's hotel booking concierge for India.
+
+STRICT FLOW — 6 steps, each waits for user input before moving to the next:
+
+STEP 1 — SEARCH
+When: user asks for hotels or mentions a city.
+Do: call searchHotels.
+Say after: "Here are some great options in [city]!" — do NOT list hotels in text, the UI displays them automatically.
+Wait for user to pick a hotel.
+
+STEP 2 — ROOMS
+When: user mentions a specific hotel name or says they like one.
+Do: call getRooms.
+Say after: "Here are the available rooms!" — do NOT list rooms in text, the UI displays them automatically.
+⛔ DO NOT ask for dates. DO NOT ask for guests. JUST STOP and wait.
+
+STEP 3 — ASK FOR DATES AND GUESTS
+When: user explicitly selects a room by name or says "I want this room" / "book this" / "I'll take the [room name]".
+Do: NO tool call. The rooms are already displayed — DO NOT call getRooms again, DO NOT list rooms again.
+Say exactly:
+"Please share your booking details:
+• Check-in date (YYYY-MM-DD)
+• Check-out date (YYYY-MM-DD)
+• Number of guests"
+Wait for user reply.
+
+STEP 4 — CHECK AVAILABILITY
+When: user provides all 3 — check-in, check-out, and guest count.
+Do: call checkRoomAvailability.
+
+  → If guestCapacityIssue = true:
+    Tell user the capacity. List alternatives by name and price.
+    Ask them to choose a different room → back to STEP 3.
+
+  → If available = false (dates clash):
+    Tell user those dates are unavailable. Ask for new dates → back to STEP 3.
+
+  → If available = true:
+    Immediately call calculateBookingPrice (same reply, no pause).
+
+STEP 5 — PRICING (auto-chained)
+When: calculateBookingPrice returns calculated = true.
+Do: show the price breakdown in plain text.
+Then immediately call generateBookingLink (same reply, no pause).
+
+STEP 6 — BOOKING LINK (auto-chained)
+When: generateBookingLink returns generated = true.
+Do: say "Your booking link is ready! Tap below to complete your reservation."
+The link button appears automatically — do NOT write the URL in your message.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⛔ NEVER ask for dates or guests before the user has selected a room (STEP 2 → just wait).
+⛔ NEVER call checkRoomAvailability unless you have roomId + checkIn + checkOut + guests.
+⛔ NEVER call calculateBookingPrice before checkRoomAvailability confirms available=true.
+⛔ NEVER call generateBookingLink before calculateBookingPrice confirms calculated=true.
+✅ STEPS 4→5→6 must all happen in one reply once triggered.
+✅ Keep replies short and friendly.
+✅ Never invent prices, room names, or hotel data.`;
+
+// ─── Tool definitions ─────────────────────────────────────────────────────────
+const toolDefinitions = [
   {
     type: "function",
     function: {
       name: "searchHotels",
       description:
-        "Search for hotels by city, vibe, category, and max price. Call this first when user wants to find hotels.",
+        "Search hotels by city, travel vibe, category, max price. Call when user asks for hotel recommendations or mentions a city.",
       parameters: {
         type: "object",
         properties: {
-          city: {
-            type: "string",
-            description: "Indian city name (required)",
-          },
+          city: { type: "string", description: "City in India" },
           vibe: {
             type: "string",
             enum: [
@@ -206,17 +350,12 @@ const tools = [
               "solo",
               "wellness",
             ],
-            description: "Vibe preference (optional)",
           },
           category: {
             type: "string",
             enum: ["budget", "comfort", "luxury", "boutique"],
-            description: "Hotel category (optional)",
           },
-          maxPrice: {
-            type: "number",
-            description: "Maximum starting price per night in INR (optional)",
-          },
+          maxPrice: { type: "number", description: "Max price per night INR" },
         },
         required: ["city"],
       },
@@ -227,159 +366,170 @@ const tools = [
     function: {
       name: "getRooms",
       description:
-        "Get available rooms for a specific hotel. Call this after user selects a hotel.",
+        "Fetch available rooms for a hotel. Call ONLY when user has explicitly chosen a specific hotel by name. Do NOT call this automatically after searchHotels.",
       parameters: {
         type: "object",
         properties: {
           hotelId: {
             type: "string",
-            description: "MongoDB _id of the hotel from searchHotels result",
+            description: "Hotel _id from search results",
           },
-          hotelSlug: {
-            type: "string",
-            description: "Slug of the hotel for building booking link",
-          },
-          hotelName: {
-            type: "string",
-            description: "Name of hotel for display",
-          },
+          hotelName: { type: "string", description: "Hotel display name" },
+          hotelSlug: { type: "string", description: "Hotel slug" },
         },
-        required: ["hotelId", "hotelSlug", "hotelName"],
+        required: ["hotelId", "hotelName", "hotelSlug"],
       },
     },
   },
   {
     type: "function",
     function: {
-      name: "estimateBudget",
+      name: "checkRoomAvailability",
       description:
-        "Estimate total trip cost including hotel, food, transport, and activities.",
+        "Check if a room is available. ONLY call this after: (1) user has selected a specific room, (2) user has provided check-in date, check-out date, AND guest count. Missing any of these = do NOT call.",
       parameters: {
         type: "object",
         properties: {
-          city: {
-            type: "string",
-            description: "Indian city name",
-          },
-          nights: {
-            type: "number",
-            description: "Number of nights",
-          },
-          guests: {
-            type: "number",
-            description: "Number of guests",
-          },
-          pricePerNight: {
-            type: "number",
-            description: "Room price per night in INR",
-          },
-          hotelCategory: {
-            type: "string",
-            enum: ["budget", "comfort", "luxury", "boutique"],
-            description: "Hotel category",
-          },
+          roomId: { type: "string", description: "Room _id" },
+          checkIn: { type: "string", description: "YYYY-MM-DD" },
+          checkOut: { type: "string", description: "YYYY-MM-DD" },
+          guests: { type: "number", description: "Guest count" },
+        },
+        required: ["roomId", "checkIn", "checkOut", "guests"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "calculateBookingPrice",
+      description:
+        "Calculate total price with GST. ONLY call after checkRoomAvailability returns available=true.",
+      parameters: {
+        type: "object",
+        properties: {
+          roomId: { type: "string" },
+          checkIn: { type: "string", description: "YYYY-MM-DD" },
+          checkOut: { type: "string", description: "YYYY-MM-DD" },
+          guests: { type: "number" },
+        },
+        required: ["roomId", "checkIn", "checkOut", "guests"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "generateBookingLink",
+      description:
+        "Generate the checkout URL. ONLY call after calculateBookingPrice returns calculated=true.",
+      parameters: {
+        type: "object",
+        properties: {
+          hotelSlug: { type: "string" },
+          roomId: { type: "string" },
+          roomName: { type: "string" },
+          pricePerNight: { type: "number" },
+          checkIn: { type: "string", description: "YYYY-MM-DD" },
+          checkOut: { type: "string", description: "YYYY-MM-DD" },
+          guestCount: { type: "number" },
         },
         required: [
-          "city",
-          "nights",
-          "guests",
+          "hotelSlug",
+          "roomId",
+          "roomName",
           "pricePerNight",
-          "hotelCategory",
+          "checkIn",
+          "checkOut",
+          "guestCount",
         ],
       },
     },
   },
 ];
 
+// ─── Controller ───────────────────────────────────────────────────────────────
 const concierge = asyncHandler(async (req, res) => {
   const { messages } = req.body;
+  if (!messages?.length) throw new ApiError(400, "messages are required!");
 
-  if (!messages || !messages.length) {
-    throw new ApiError(400, "messages are required!");
-  }
-
-  const systemPrompt = `You are NestIQ's AI travel concierge for India.
-
-FLOW YOU MUST ALWAYS FOLLOW:
-1. Search hotels first using searchHotels tool with city (required), vibe (optional), category (optional), maxPrice (optional)
-2. Present hotels clearly with name, price, rating, vibes
-3. Ask user which hotel they like
-4. When user picks one, call getRooms with hotelId, hotelSlug, hotelName from search results
-5. Present available rooms with type, price, max guests
-6. Tell user to click the booking link to reserve their room
-7. NEVER suggest booking at hotel level — booking always happens at room level
-
-Be concise, friendly, India-specific. Always use tools — never guess hotel names or prices.`;
-
-  const conversationMessages = [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
+  const conversation = [
+    { role: "system", content: SYSTEM_PROMPT },
     ...messages,
   ];
 
   let hotelResults = null;
   let roomResults = null;
+  let bookingLinkResult = null;
+
+  // AI returns content + tool_calls in the same message turn
   let finalResponse = "";
-  let iterationCount = 0;
-  const maxIterations = 5;
+  const MAX_ITER = 8;
 
   try {
-    while (iterationCount < maxIterations) {
-      iterationCount++;
-
-      const response = await groq.chat.completions.create({
+    for (let iter = 0; iter < MAX_ITER; iter++) {
+      const resp = await groq.chat.completions.create({
         model: MODEL,
-        messages: conversationMessages,
-        tools,
+        messages: conversation,
+        tools: toolDefinitions,
         tool_choice: "auto",
-        temperature: 0.4,
+        temperature: 0.3,
         max_completion_tokens: 1024,
       });
 
-      const message = response.choices[0].message;
-      conversationMessages.push(message);
+      const msg = resp.choices[0].message;
+      conversation.push(msg);
 
-      // No tool calls = final response
-      if (!message.tool_calls || message.tool_calls.length === 0) {
-        finalResponse =
-          message.content ?? "I found what you're looking for above.";
-        break;
-      }
+      // BUG FIX: capture text content on EVERY turn, not only on break.
+      // Some models return text + tool_calls in the same message.
+      // We want the last non-empty text the AI produced.
+      if (msg.content?.trim()) finalResponse = msg.content.trim();
+
+      // No tool calls → done
+      if (!msg.tool_calls?.length) break;
 
       // Execute tools
-      for (const toolCall of message.tool_calls) {
-        const functionName = toolCall.function.name;
-        const functionArgs = JSON.parse(toolCall.function.arguments);
-        const functionResponse =
-          await availableFunctions[functionName](functionArgs);
+      for (const call of msg.tool_calls) {
+        const fn = call.function.name;
+        const args = JSON.parse(call.function.arguments);
+        const impl = TOOLS[fn];
 
-        const parsed = JSON.parse(functionResponse);
-
-        // ✅ Track results across iterations
-        if (functionName === "searchHotels" && parsed.found) {
-          hotelResults = parsed.hotels;
+        if (!impl) {
+          conversation.push({
+            role: "tool",
+            tool_call_id: call.id,
+            name: fn,
+            content: JSON.stringify({ error: `Unknown: ${fn}` }),
+          });
+          continue;
         }
-        if (functionName === "getRooms" && parsed.found) {
+
+        const raw = await impl(args);
+        const parsed = JSON.parse(raw);
+
+        if (fn === "searchHotels" && parsed.found) hotelResults = parsed.hotels;
+        if (fn === "getRooms" && parsed.found)
           roomResults = {
             rooms: parsed.rooms,
             hotelName: parsed.hotelName,
             hotelSlug: parsed.hotelSlug,
           };
-        }
+        if (fn === "generateBookingLink" && parsed.generated)
+          bookingLinkResult = parsed.link;
 
-        conversationMessages.push({
+        conversation.push({
           role: "tool",
-          tool_call_id: toolCall.id,
-          name: functionName,
-          content: functionResponse,
+          tool_call_id: call.id,
+          name: fn,
+          content: raw,
         });
       }
     }
 
-    if (hotelResults)
+    // Inject markers — each appended after the AI's text
+    if (hotelResults?.length)
       finalResponse = injectHotelsMarker(finalResponse, hotelResults);
+
     if (roomResults)
       finalResponse = injectRoomsMarker(
         finalResponse,
@@ -388,19 +538,15 @@ Be concise, friendly, India-specific. Always use tools — never guess hotel nam
         roomResults.hotelSlug,
       );
 
-    if (iterationCount >= maxIterations) {
-      console.warn("⚠️  Max iterations reached");
-      finalResponse =
-        "I've reached my limit for this conversation. Please try again with a more specific request.";
-    }
+    if (bookingLinkResult)
+      finalResponse = injectBookingLinkMarker(finalResponse, bookingLinkResult);
 
-    console.log("📤 Streaming response to client...");
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.write(finalResponse);
     res.end();
-  } catch (error) {
-    console.error("❌ Error in Concierge:", error.message);
-    throw error;
+  } catch (err) {
+    console.error("❌ Concierge error:", err.message);
+    throw err;
   }
 });
 
